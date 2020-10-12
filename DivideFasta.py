@@ -19,6 +19,7 @@ for seqRec in SeqIO.parse(inFile, "fasta"):
         start=idx*L
         end=min((idx+1)*L, seqLen)
         sub = seq[start:end]
+#        seqRec.id=seqRec.id.replace("/", "_").replace("|","_")
         outFile=open(base+ "." + seqRec.id + "_"+str(idx) + ".fasta", 'w')
         outFile.write(">"+seqRec.id+"/"+str(idx)+"\n")
         last=int(len(sub)/60)

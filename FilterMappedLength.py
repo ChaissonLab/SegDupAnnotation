@@ -10,7 +10,7 @@ if source != "gencode":
 
 outFile = sys.stdout
 
-sys.stdout.write((str(af.header)) + "\n")
+sys.stdout.write(str(af.header))
 nFilt = 0
 total = 0
 for aln in af.fetch():

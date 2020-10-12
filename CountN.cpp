@@ -3,8 +3,8 @@
 #include <vector>
 using namespace std;
 int main() {
-	long int nl=0, nh=0, other=0;
-
+	int nl=0, nh=0, other=0;
+	vector<int> low(256,0), high(256,0);
 	string prevTitle = "";
 	while (cin) {
 		string line;
@@ -20,10 +20,10 @@ int main() {
 				}
 			}
 			nl=0; nh=0;
-			prevTitle = line;
+			prevTitle = line.substr(1);
 		}
 		for (int i=0; i < line.size(); i++) {
-			if (line[i] >= 'a' && line[i] <= 'z') {
+			if (line[i] == 'N') {
 				nl+=1;
 			}
 			else {

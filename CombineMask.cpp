@@ -59,9 +59,9 @@ int main(int argc, char* argv[]) {
 			}
 		}
 		outFile << ">" << ks[0]->name.s << endl;
-		int p=0;
+		long p=0;
 		while (p < ks[0]->seq.l) {
-			int end = min(p+60, (int) ks[0]->seq.l);
+			long int end =  min(p+60, (long int) ks[0]->seq.l);
 			string sub(&ks[0]->seq.s[p], end-p);
 			outFile << sub << endl;
 			p=end;
