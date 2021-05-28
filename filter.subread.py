@@ -127,8 +127,6 @@ for molecule in reads.keys():
             index=subreadAlignmentSet
             max=compare
     #print("max"+str(max))
-    if (index is None):
-        continue
     for j in range(0,len(reads[molecule][index])  ):
         #print(c[1])
         if j not in c[1] :
