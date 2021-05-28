@@ -4,7 +4,7 @@ import sys
 import argparse
 ap=argparse.ArgumentParser(description="Filter pacbio alignments to extract alignments from longest mapped subread.")
 ap.add_argument("--input", help="input file.", default="/dev/stdin")
-
+ap.add_argument("--mapq",help="mapQ threshold.",default=10,type=int)
 
 
 
@@ -70,9 +70,9 @@ def NonOverlappingAlignedBases(alignmentList):
         #span=span+c1[2]
         l2= alignmentList[r+1]
         c2=coordinate(r_len, int(l2[4]),int(l2[5]),int(l2[6]))
-        if c1[0]==c2[0] and c1[1]==c2[1]:
-                non.add(i)
-                non.add(j)
+        if c1[0]==c2[0] and c1[1]==c2[1]: #and readname is the same
+                non.add(r)
+#                non.add(r+1)
                 continue
 
     cs = ( span(alignmentList, non), non)
@@ -90,7 +90,7 @@ for line in inFile:
     line=line.rstrip()+"\n"
     vals=line.split("\t")
 
-    if (int(vals[7]) < 30):
+    if (int(vals[7]) < args.mapq):
         continue
 
     readName=vals[3]
@@ -114,7 +114,7 @@ for molecule in reads.keys():
                 sys.stdout.write("\t".join(reads[molecule][key][i]))
         continue
     c=()
-    max=0
+    maxi=0
     index=None
     for subreadAlignmentSet in subreadKeys:
         z=len(reads[molecule][subreadAlignmentSet])
@@ -123,9 +123,9 @@ for molecule in reads.keys():
         c = NonOverlappingAlignedBases( s_ls )
         compare=int(c[0])
         #print("comp"+str(compare))
-        if compare > max :
+        if compare > maxi :
             index=subreadAlignmentSet
-            max=compare
+            maxi=compare
     #print("max"+str(max))
     for j in range(0,len(reads[molecule][index])  ):
         #print(c[1])
