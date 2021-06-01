@@ -3,7 +3,7 @@ import tempfile
 import subprocess
 import os.path
 # Snakemake and working directories
-SD = "/project/mchaisso_100/cmb-16/rdagnew/SegDupAnalysis/VGP/VGP"#os.path.dirname(workflow.snakefile)
+SD = os.path.dirname(workflow.snakefile)
 
 # Config
 configfile: "sd_analysis.json"
@@ -11,26 +11,21 @@ configfile: "sd_analysis.json"
 assembly=config["asm"]
 geneModel = config["genemodel"].keys()
 
-
-indParam = config['index_params']
-#mapParam = config['mapping_params']
-
-
 #RNADatasets = config["RNAseq"].keys()
 spliced=[ "multi", "single"]
 
 bamFiles={f.split("/")[-1]: f for f in config["reads_bam"] }
 
 
-localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, LinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, RunSedef, AnnotateLowCoverageFlanks
+localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, LinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked
 
 rule all:
     input:
-        fai="assembly.orig.fasta.fai",
+        fai=assembly+".fai",
         bam=config["bam"],
-        wm_db="wmdb",
-        wm_intv="wm_mask_intervals",
-        masked="assembly.masked.fasta",
+#        wm_db="wmdb",
+#        wm_intv="wm_mask_intervals",
+#        masked="assembly.masked.fasta",
         sedef="sedef_out/final.bed",
         sedef_sorted="sedef_out/final.sorted.bed",
         sedef_pairs_gml="sedef_out/final.sorted.bed.pairs.gml",
@@ -52,8 +47,8 @@ rule all:
         splitAndSpliced=expand("genes_in_resolved_dups.one_isoform.{sp}.bed", sp=spliced),
         alignedIsoforms=expand("identity.{sp}.bed", sp=spliced),
         sedef_filt="sedef_out/final.sorted.bed.final.filt",
-        repmasked="assembly.repeat_masked.fasta",
-        repmaskedOut="assembly.repeat_masked.fasta.out",
+#        repmasked="assembly.repeat_masked.fasta",
+#        repmaskedOut="assembly.repeat_masked.fasta.out",
         dups="collapsed_duplications.bed",
         genecol="collapsed_dups_with_genes.bed",
         allDupsWithGenes="collapsed_and_resolved_dups_with_genes.bed",
@@ -81,48 +76,28 @@ rule all:
         counted="sedef_out/counted.tab",
         tandem_dups="sedef_out/tandem_dups.bed",
         low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",
-        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
+#        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
-        sdDistPdf=config["species"]+".sd_dist.pdf",
-        aln=expand("aligned/{b}.bam", b=bamFiles.keys())
+        sdDistPdf=config["species"]+".sd_dist.pdf"
 
 
 #
 # Simple preprocessing, make sure there is an index on the assembly.
 #
 
-#rule MakeFAI:
-#    input:
-#        asm=assembly
-#    output:
-#        fai=assembly+".fai"
-#    params:
-#       grid_opts=config["grid_small"]
-#    resources:
-#        load=1
-#    shell:"""
-#samtools faidx {input.asm}
-#"""
-
-
-rule LinkOrig:
+rule MakeFAI:
     input:
         asm=assembly
     output:
-        orig="assembly.orig.fasta",
-        fai="assembly.orig.fasta.fai"
+        fai=assembly+".fai"
     params:
-        grid_opts=config["grid_small"],
-        sd=SD
+       grid_opts=config["grid_small"]
     resources:
         load=1
     shell:"""
-ln -s {input.asm} {output.orig}
-samtools faidx {output.orig}
+samtools faidx {input.asm}
 """
-
-
 
 rule IndexGenome:
     input:
@@ -132,9 +107,9 @@ rule IndexGenome:
     params:
         sd=SD,
         grid_opts=config["grid_large"],
-        i=indParam
+        index_params=config["index_params"]
     shell:"""
-lra index {params.i} {input.ref}
+lra index {input.ref} {params.index_params}
 """
 
 def GetBam(f):
@@ -145,32 +120,31 @@ def GetBam(f):
 #
 rule AlignBam:
     input:
-        bam=lambda wildcards: bamFiles[wildcards.bam],
+        bam=lambda wildcards: bamFiles[wildcards.base],
         gli=config["asm"]+".gli"
     output:
-        aligned="aligned/{bam}.bam"
+        aligned="aligned/{base}.bam"
     params:
         sd=SD,
         ref=config["asm"],
         grid_opts=config["grid_large"],
         temp=config["temp"],
+        mapping_params=config["mapping_params"]
     resources:
         load=16
     shell:"""
 mkdir -p aligned
-{params.sd}/Cat.sh {input.bam} |  minimap2 {params.ref} - -t 16 -a | \
+{params.sd}/Cat.sh {input.bam} | lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
    samtools sort -T {params.temp}/asm.$$ -@2 -m2G -o {output.aligned}
 
+#samtools view -h -F 2304 {input.bam} | samtools fastq - | 
 """
 
-
-
-#if len(config["reads_bam"]) >1:
 rule MergeBams:
     input:
         aln=expand("aligned/{b}.bam", b=bamFiles.keys())
     output:
-        bam=config["bam"]
+        bam=config["bam"]        
     params:
         grid_opts=config["grid_medium"]
     resources:
@@ -178,19 +152,18 @@ rule MergeBams:
     shell:"""
 samtools merge {output.bam} {input.aln} -@2
 """
-#else:
-#    rule MergeBams2:
-#        input:
-#            aln=expand("aligned/{b}", b=bamFiles.keys())
-#        output:
-#            bam=config["bam"]
-#        params:
-#            grid_opts=config["grid_medium"]
-#        resources:
-#            load=2
-#        shell:"""
-#ln -s {input.aln} {output.bam}  
-#    """    
+
+rule IndexBam:
+    input:
+        bam=config["bam"]
+    output:
+        bai=config["bam"] + ".bai"
+    resources:
+        load=2
+    shell:"""
+samtools index -@2 {input.bam}
+"""
+
 ##
 ## The read depth analysis and duplication assembly all need mapped reads
 ## 
@@ -292,7 +265,7 @@ rule SplitGenome:
         load=1
     shell:"""
 mkdir -p split
-{params.sd}/DivideFasta.py {input.asm} 10000000 split/to_mask
+{params.sd}/DivideFasta.py {input.asm} 10000000 10000 split/to_mask
 """
 
 
@@ -356,22 +329,32 @@ rule CombineMasked:
 #  The final masked genome combines wm and repeatmasker
 #
 
-
-
-rule UnionMasked:
-    input:
-        orig="assembly.orig.fasta",
-        wm="assembly.masked.fasta",
-        rm="assembly.repeat_masked.fasta"
-    output:
-        comb="assembly.union_masked.fasta",
-    params:
-        sd=SD,
-        grid_opts=config["grid_medium"]
-    resources:
-        load=1
-    shell:"""
-{params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
+if config["repeat_library"] != "pre_masked":
+   
+    rule UnionMasked:
+        input:
+            orig="assembly.orig.fasta",
+            wm="assembly.masked.fasta",
+            rm="assembly.repeat_masked.fasta"
+        output:
+            comb="assembly.union_masked.fasta"
+        params:
+            sd=SD,
+            grid_opts=config["grid_medium"]
+        resources:
+            load=1
+        shell:"""
+        {params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
+        samtools faidx {output.comb}
+        """
+else:
+    rule UnionMasked:
+        input:
+            orig="assembly.orig.fasta"
+        output:
+            comb="assembly.union_masked.fasta"
+        shell:"""
+ln -sf {input.orig} {output.comb}
 samtools faidx {output.comb}
 """
 
@@ -393,7 +376,7 @@ rule RunDepthHmm:
     resources:
         load=16
     shell:"""
-snakemake --nolock -p -s hmm_caller.vert.snakefile -j 16 --rerun-incomplete
+snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete
 """
 
 rule ConvertHMMCopyNumberToCollapsedDuplications:
@@ -425,18 +408,6 @@ bedtools merge -i {input.cb} -c 5 -o collapse > {input.cb}.collapse
 """
 
 
-
-rule RemoveBams:
-    input:
-        bam=config['bam'],
-        s="collapsed_duplications.split.bed"
-    params:
-        grid_opts=config["grid_small"],
-    shell:"""
-
- rm {input.bam}
-    """
-
 #
 # The following rules do the initial resolved repeat detection with
 # sedef, and then postprocess the output to remove excess duplications.
@@ -451,11 +422,15 @@ rule RunSedef:
     output:
         done="sedef_out/final.bed"
     params:
-        grid_opts=config["grid_large"]  + " --nodelist=\"d11-0[5-8]\" --ntasks=1 "
+        grid_opts=config["grid_sedef"],
+        sd=SD
     resources:
         load=16
     shell:"""
-export PATH=$PATH:$mchaisso/software/sedef/
+
+module load gcc/8.3.0
+module load parallel
+export PATH=$PATH:{params.sd}/sedef
 
 sedef.sh -f {input.asm} -j 16 
 """
@@ -629,7 +604,8 @@ cat  {input.repeats} | awk '{{ if ($1 == $4 && $5 > $3 && $5-$3 < 1000 && prevPo
 rule AnnotateLowCoverageFlanks:
     input:
         tandem="sedef_out/tandem_dups.bed",
-        bam="assembly.bam",
+        bam=config["bam"],
+        bai=config["bam"] + ".bai",
         meancov="hmm/mean_cov.txt"
     output:
         low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",
@@ -1002,8 +978,9 @@ rule FindResolvedDupliatedGenes:
     resources:
         load=1
     shell:"""
-bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | awk '{{ if ($13 != ".") print; }}' | \
-{params.sd}/RefSeqToName.py | bedtools sort >  {output.resdup}
+bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | \
+  awk '{{ if ($13 != ".") print; }}' | \
+  bedtools sort >  {output.resdup}
 """
 
 
@@ -1047,9 +1024,10 @@ rule CombineGenesWithCollapsedDups:
         load=1
     shell:"""
 samtools faidx {input.asm}
-bedtools intersect -f 1 -g {input.asm}.fai -sorted -loj -a {input.rnabed} -b {input.dups} | awk '{{ if ($13 != ".") print;}}'| \
-{params.sd}/RefSeqToName.py | \
-bedtools sort >  {output.rnabedout}
+bedtools intersect -f 1 -g {input.asm}.fai -sorted -loj -a {input.rnabed} -b {input.dups} | \
+ awk '{{ if ($13 != ".") print;}}'| \
+ bedtools sort >  {output.rnabedout}
+
 """
 
 rule GetCollapseWithGenes:
@@ -1147,6 +1125,21 @@ cat {input.coll} {input.res} | sort > {output.summary}
 #    input:
 #        rnabed=
 #
+rule LinkOrig:
+    input:
+        asm=config["asm"]
+    output:
+        orig="assembly.orig.fasta",
+        fai="assembly.orig.fasta.fai"
+    params:
+        grid_opts=config["grid_small"],
+        sd=SD
+    resources:
+        load=1
+    shell:"""
+ln -s {input.asm} ./{output.orig}
+samtools faidx {output.orig}
+"""
 
 
 
@@ -1236,7 +1229,7 @@ rule SplitSplicedAndSingleExon:
     
 rule AlignIsoforms:
     input:
-        asm="assembly.repeat_masked.fasta",
+        asm="assembly.union_masked.fasta",
         refGenes=config["genemodel"]["gencode"],
         dups="genes_in_resolved_dups.one_isoform.{sp}.bed"
     output:
@@ -1281,7 +1274,7 @@ cat {input.reps} | awk '{{ print $1":"$2"-"$3;}}' > {output.rgn}
 rule CountRepeatIdentity:
     input:
         reps="sedef_out/counted.bed.rep.rgn",
-        asm="assembly.repeat_masked.fasta"
+        asm="assembly.union_masked.fasta"
     output:
         ident="sedef_out/counted.bed.rep.rgn.ident"
     params:
@@ -1347,7 +1340,7 @@ rule MapIsoSeq:
         load=16
     shell:"""
 mkdir -p IsoSeq
-minimap2 -t 4 -ax splice -uf -C5 {input.assembly} {input.rna} | samtools view -uS - | samtools sort -T $TMPDIR -m2G -o {output.aln}
+minimap2 -t 16 -ax splice -uf -C5 {input.assembly} {input.rna} | samtools view -uS - | samtools sort -T $TMPDIR -m2G -o {output.aln}
 samtools index -c {output.aln}
 """
 
@@ -1473,6 +1466,17 @@ done  >> {output.aln}
 """
 
 
+#rule LinkOriginalAssembly:
+#    input:
+#        ref=config["asm"]
+#    output:
+#        asm="assembly.orig.fasta",
+#        fai="assembly.orig.fasta.fai",
+#    shell:"""
+#ln -s {input.ref} {output.asm}
+#samtools faidx {output.asm}
+#"""
+    
 rule PlotIdeogram:
     input:
         fai="assembly.orig.fasta.fai",
