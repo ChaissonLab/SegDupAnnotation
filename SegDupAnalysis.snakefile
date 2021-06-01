@@ -160,6 +160,8 @@ rule IndexBam:
         bai=config["bam"] + ".bai"
     resources:
         load=2
+    params:
+        grid_opts=config["grid_medium"]
     shell:"""
 samtools index -@2 {input.bam}
 """
