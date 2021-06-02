@@ -42,17 +42,28 @@ mkdir -p hmm
 samtools view -q 10 -F 2304 -@ 3 {input.bam} | {params.sd}/hmm/samToBed /dev/stdin/ --useH --flag   > {output.bed}
 """
 
-rule FilterSubreads:
-    input:
-        bed="hmm/cov.bed",
-    output:
-        covbed="hmm/cov.no_subread.bed",
-    params:
-        sd=SD,
-    shell:"""
-{params.sd}/RemoveRedundantSubreads.py --input {input.bed} |sort -k1,1 -k2,2n > {output.covbed}
-"""
-
+if config['index_params']==" -CLR":    
+    rule FilterSubreads:
+        input:
+            bed="hmm/cov.bed",
+        output:
+            covbed="hmm/cov.no_subread.bed",
+        params:
+            sd=SD,
+        shell:"""
+    {params.sd}/RemoveRedundantSubreads.py --input {input.bed} |sort -k1,1 -k2,2n > {output.covbed}
+    """
+else:
+    rule FilterSubreads0:
+        input:
+            bed="hmm/cov.bed",
+        output:
+            covbed="hmm/cov.no_subread.bed",
+        params:
+            sd=SD,
+        shell:"""
+    ln -s {input} {output}
+    """
 rule MakeIntersect:
     input:
         bed="hmm/cov.no_subread.bed",
