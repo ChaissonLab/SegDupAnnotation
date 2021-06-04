@@ -65,8 +65,8 @@ rule all:
 #        resGeneNames="circos/genes_in_resolved_dups.links.names.tsv",
 #        filtSDResGeneLinks="circos_filtsd/genes_in_resolved_dups.links.tsv",
 #        filtSDResGeneNames="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
-        plot="circos/circos.png",
-        plotfilt="circos_filtsd/circos.png",
+     #   plot="circos/circos.png",
+      #  plotfilt="circos_filtsd/circos.png",
 
 #        repmasked="assembly.repeat_masked.fasta",
 #        repmaskedOut="assembly.repeat_masked.fasta.out",
@@ -764,38 +764,7 @@ rule FiltDupToBed12:
 bedtools bamtobed -bed12 -i {input.realignedOneIsoform} | {params.sd}/SimplifyNameInBed12.py | sort -k4,4 -k1,1 -k2,2n | bedtools groupby -g 1-3 -c 2 -o first -full > {output.bed}
 """
 
-rule FiltDupToLinks:
-    input:
-        bed="genes_in_resolved_dups.one_isoform.bed.filt.sam.bed12",
-    output:
-        links="circos_filtsd/genes_in_resolved_dups.links.tsv",
-        names="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
-    params:
-        sd=SD,
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-mkdir -p circos
-cat {input.bed} | {params.sd}/Bed12ToArcs.py {output.links} {output.names}
-"""
 
-
-rule FullDupToLinks:
-    input:
-        bed="genes_in_resolved_dups.one_isoform.bed.full.sam.bed12",
-    output:
-        links="circos/genes_in_resolved_dups.links.tsv",
-        names="circos/genes_in_resolved_dups.links.names.tsv"
-    params:
-        sd=SD,
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-mkdir -p circos
-cat {input.bed} | {params.sd}/Bed12ToArcs.py {output.links} {output.names}
-"""
 
 rule RemapBed:
     input:
@@ -838,67 +807,7 @@ grep -v "^@" {input.realignedOneIsoform} | awk '{{ for (i=1; i <= NF; i++) {{ if
 bedtools groupby -g 4 -c 4 -i {output.b12} -o count > {output.counts}
 """
 
-rule MakeCircOS:
-    input:
-        asm="assembly.orig.fasta",
-        coll="gencode.mapped.bam.bed12.dups.unique",
-        links="circos/genes_in_resolved_dups.links.tsv",
-        names="circos/genes_in_resolved_dups.links.names.tsv"
-    output:
-        plt="circos/circos.png"
-    params:
-        sd=SD,
-        grid_opts=config["grid_medium"]
-    resources:
-        load=1
-    shell:"""
-mkdir -p circos
 
-
-
-cat {input.coll} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
-
-cut -f 1 {input.asm}.fai | sed "s/_/__/g" > {input.asm}.display_name
-paste {input.asm}.fai {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}}  }}' > circos/karyotype.txt
-
-cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$4;}}' > circos/cn.lab.txt
-cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$5;}}' > circos/cn.txt
-
-#{params.sd}/MakeDup.py --bed  --collapsed {input.coll}.name.cn --links circos/resolved_dups.txt --labels circos/resolved_dups.labels.txt
-cd circos && circos --conf {params.sd}/circos.conf 
-
-"""
-
-
-rule MakeCircOSHighIdentityDups:
-    input:
-        asm="assembly.orig.fasta",
-        coll="gencode.mapped.bam.bed12.dups.unique",
-        links="circos_filtsd/genes_in_resolved_dups.links.tsv",
-        names="circos_filtsd/genes_in_resolved_dups.links.names.tsv"
-    output:
-        plt="circos_filtsd/circos.png"
-    params:
-        sd=SD,
-        grid_opts=config["grid_medium"]
-    resources:
-        load=1
-    shell:"""
-mkdir -p circos_filtsd
-
-cat {input.coll} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
-
-cut -f 1 {input.asm}.fai | sed "s/_/__/g" > {input.asm}.display_name
-paste {input.asm}.fai {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}} }}' > circos_filtsd/karyotype.txt
-
-cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$4;}}' > circos_filtsd/cn.lab.txt
-cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$5;}}' > circos_filtsd/cn.txt
-
-#{params.sd}/MakeDup.py --bed  --collapsed {input.coll}.name.cn --links circos_filtsd/resolved_dups.txt --labels circos_filtsd/resolved_dups.labels.txt
-cd circos_filtsd && circos --conf {params.sd}/circos.conf 
-
-
-"""
 
 rule GetUniqueGencodeUnresolvedDupGenesCN:
     input:
@@ -1101,7 +1010,7 @@ rule CombineDuplicatedGenesWithCoordinates:
         grid_opts=config["grid_small"]
     shell:"""
 cat gencode.mapped.bam.bed12.dups |  \
-  $mchaisso/projects/VGP/SimplifyNameInBed12.py | \
+  {params.sd}/SimplifyNameInBed12.py | \
   awk '{{ print $4"\\t"$(NF-1) "\\t" $1 "\\t" $2 "\\t" $3"\\t1\\tcollapse";}}' > {output.comb}.tmp
 
 cat genes_in_resolved_dups.one_isoform.bed.sam.filt.bed12 | \
