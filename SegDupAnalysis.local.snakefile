@@ -462,8 +462,8 @@ rule RunSedef:
     shell:"""
 
 module load gcc/8.3.0
-module load parallel
 module load time
+module load parallel
 export PATH=$PATH:{params.sd}/sedef
 
 sedef.sh -f {input.asm} -j 16 
