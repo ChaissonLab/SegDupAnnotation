@@ -36,9 +36,11 @@ rule all:
     input:
         fai="assembly.orig.fasta.fai",
         bam=config["bam"],
+
 #        wm_db="wmdb",
 #        wm_intv="wm_mask_intervals",
 #        masked="assembly.masked.fasta",
+
         sedef="sedef_out/final.bed",
 #        sedef_sorted="sedef_out/final.sorted.bed",
 #        sedef_pairs_gml="sedef_out/final.sorted.bed.pairs.gml",
@@ -51,20 +53,14 @@ rule all:
 
 #        oneIsoform                 = "genes_in_resolved_dups.one_isoform.bed.filt",
 #        gencodeInDupsNotTandem     = "genes_in_resolved_dups.one_isoform.bed.filt.not_tandem",
-
 #        splitAndSpliced=expand("genes_in_resolved_dups.one_isoform.{sp}.bed", sp=spliced),
         alignedIsoforms=expand("identity.{sp}.bed", sp=spliced),
-
 #        realignedOneIsoform        = "genes_in_resolved_dups.one_isoform.bed.filt.sam",
 #        b12                        = "genes_in_resolved_dups.one_isoform.bed.filt.sam.bed12",        
 #        realignedOneIsoformFull    = "genes_in_resolved_dups.one_isoform.bed.full.sam",
 #        realignedOneIsoformFullBed = "genes_in_resolved_dups.one_isoform.bed.full.sam.bed12",
-        
-
 
 #        geneDups="resolved_dups_with_genes.bed",
-
-
 #        resGeneLinks="circos/genes_in_resolved_dups.links.tsv",
 #        resGeneNames="circos/genes_in_resolved_dups.links.names.tsv",
 #        filtSDResGeneLinks="circos_filtsd/genes_in_resolved_dups.links.tsv",
@@ -72,18 +68,12 @@ rule all:
         plot="circos/circos.png",
         plotfilt="circos_filtsd/circos.png",
 
-
-
 #        repmasked="assembly.repeat_masked.fasta",
 #        repmaskedOut="assembly.repeat_masked.fasta.out",
-
-
 #        dups="collapsed_duplications.bed",
-        
 #        genecol="collapsed_dups_with_genes.bed",
         allDupsWithGenes="collapsed_and_resolved_dups_with_genes.bed",
         hmmCopyNumber="hmm/copy_number.tsv",
-
 
 #        rnabam=expand("{data}.mapped.bam",data=geneModel),
 #        rnabambed=expand("{data}.mapped.bam.bed12",data=geneModel),
@@ -105,7 +95,6 @@ rule all:
 #        RNAseqCov=expand("RNAseq/{dataset}.bam.cov", dataset=list(config["RNAseq"].keys())),
 #        combinedCov="RNAseq/combined.bed",
 #        IsoSeq=expand("IsoSeq/{dataset}.bam", dataset=list(config["IsoSeq"].keys())),
-
         asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
 #        uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
@@ -201,7 +190,18 @@ rule MergeBams:
     shell:"""
 samtools merge {output.bam} {input.aln} -@2
 """
-   
+rule IndexBam:
+    input:
+        bam=config["bam"]
+    output:
+        bai=config["bam"] + ".bai"
+    resources:
+        load=2
+    params:
+        grid_opts=config["grid_medium"]
+    shell:"""
+samtools index -@2 {input.bam}
+""" 
 ##
 ## The read depth analysis and duplication assembly all need mapped reads
 ## 
@@ -350,25 +350,34 @@ rule CombineMasked:
 #  The final masked genome combines wm and repeatmasker
 #
 
-
-
-rule UnionMasked:
-    input:
-        orig="assembly.orig.fasta",
-        wm="assembly.masked.fasta",
-        rm="assembly.repeat_masked.fasta"
-    output:
-        comb="assembly.union_masked.fasta",
-    params:
-        sd=SD,
-        grid_opts=config["grid_medium"]
-    resources:
-        load=1
-    shell:"""
-{params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
+if config["repeat_library"] != "pre_masked":
+   
+    rule UnionMasked:
+        input:
+            orig="assembly.orig.fasta",
+            wm="assembly.masked.fasta",
+            rm="assembly.repeat_masked.fasta"
+        output:
+            comb="assembly.union_masked.fasta"
+        params:
+            sd=SD,
+            grid_opts=config["grid_medium"]
+        resources:
+            load=1
+        shell:"""
+        {params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
+        samtools faidx {output.comb}
+        """
+else:
+    rule UnionMasked1:
+        input:
+            orig="assembly.orig.fasta"
+        output:
+            comb="assembly.union_masked.fasta"
+        shell:"""
+ln -sf {input.orig} {output.comb}
 samtools faidx {output.comb}
 """
-
 #
 # Use excess depth to count duplications
 #
@@ -1002,7 +1011,7 @@ rule FindResolvedDupliatedGenes:
         load=1
     shell:"""
 bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | awk '{{ if ($13 != ".") print; }}' | \
-{params.sd}/RefSeqToName.py | bedtools sort >  {output.resdup}
+ bedtools sort >  {output.resdup}
 """
 
 
@@ -1047,7 +1056,6 @@ rule CombineGenesWithCollapsedDups:
     shell:"""
 samtools faidx {input.asm}
 bedtools intersect -f 1 -g {input.asm}.fai -sorted -loj -a {input.rnabed} -b {input.dups} | awk '{{ if ($13 != ".") print;}}'| \
-{params.sd}/RefSeqToName.py | \
 bedtools sort >  {output.rnabedout}
 """
 
@@ -1234,7 +1242,7 @@ rule SplitSplicedAndSingleExon:
     
 rule AlignIsoforms:
     input:
-        asm="assembly.repeat_masked.fasta",
+        asm="assembly.union_masked.fasta",
         refGenes=config["genemodel"]["gencode"],
         dups="genes_in_resolved_dups.one_isoform.{sp}.bed"
     output:
@@ -1279,7 +1287,7 @@ cat {input.reps} | awk '{{ print $1":"$2"-"$3;}}' > {output.rgn}
 rule CountRepeatIdentity:
     input:
         reps="sedef_out/counted.bed.rep.rgn",
-        asm="assembly.repeat_masked.fasta"
+        asm="assembly.union_masked.fasta"
     output:
         ident="sedef_out/counted.bed.rep.rgn.ident"
     params:
