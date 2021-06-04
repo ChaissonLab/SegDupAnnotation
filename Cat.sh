@@ -5,5 +5,8 @@ elif [[ $1 == *".bam" ]]; then
 		samtools view -hF 2304 $1 | samtools view -h | samtools fastq -
 elif [[ $1 == *".fastq" ]]; then
 		cat $1
+elif [[ $1 == *".fasta" ]]; then
+		cat $1
+elif [[ $1 == *".fa" ]]; then
+		cat $1
 fi
-
