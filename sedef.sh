@@ -132,21 +132,27 @@ if [ ! -f "${output}/seeds.joblog.ok" ] || [ "${force}" == "y" ]; then
 
 	for j in `seq 0 $((numchrs - 1))`; do # reference
 		for i in `seq $j $((numchrs - 1))`; do # query; query < reference
-			for m in n y ; do
-				[ "$m" == "y" ] && rc="-r" || rc="";
-				echo "${TIME} -f'TIMING: %e %M' sedef search -k 12 -w 16 ${rc} ${input} -t $i $j >${output}/seeds/${i}_${j}_${m}.bed 2>${output}/log/seeds/${i}_${j}_${m}.log"
+		    for m in n y ; do
+			if [ ! -e "${output}/seeds/${i}_${j}_${m}.bed" ]; then
+			     if [[  "$m" == "y"  && ( rc="-r" || rc="" ) ]]; then
+									echo "${TIME} -f'TIMING: %e %M' sedef search -k 12 -w 16 ${rc} ${input} -t $i $j >${output}/seeds/${i}_${j}_${m}.bed 2>${output}/log/seeds/${i}_${j}_${m}.log"
+								    fi
+								     else
+									 echo "${output}/seeds/${i}_${j}_${m}.bed already seeds" 1>&2
+									
+			fi
 			done
 		done
 	done | tee "${output}/seeds.comm" | ${TIME} -f'Seeding time: %E' parallel --will-cite -j ${jobs} --bar --joblog "${output}/seeds.joblog"
+ 								     
+#	proc=`cat "${output}/seeds.comm" | wc -l`
+#	echo "SD seeding done: done running ${proc} jobs!"
 
-	proc=`cat "${output}/seeds.comm" | wc -l`
-	echo "SD seeding done: done running ${proc} jobs!"
-
-	proc_ok=`grep Total ${output}/log/seeds/*.log | wc -l`
-	if [ "${proc}" != "${proc_ok}" ]; then
-		echo "Error: launched ${proc} jobs but completed only ${proc_ok} jobs; exiting..."
-		exit 2
-	fi
+#	proc_ok=`grep Total ${output}/log/seeds/*.log | wc -l`
+#	if [ "${proc}" != "${proc_ok}" ]; then
+#		echo "Error: launched ${proc} jobs but completed only ${proc_ok} jobs; exiting..."
+#		exit 2
+#	fi
 
 	# Get the single-core running time
 	sc_time=`grep TIMING ${output}/log/seeds/*.log | awk '{s+=$2}END{print s}'`
@@ -185,15 +191,20 @@ if [ ! -f "${output}/align.joblog.ok" ] || [ "${force}" == "y" ]; then
 	mkdir -p "${output}/align"
 	mkdir -p "${output}/log/align"
 	for j in "${output}/align/bucket_"???? ; do
-		k=$(basename $j);
+	    k=$(basename $j);
+	    if [ ! -e "${j}.aligned.bed" ] ; then
+		echo "sedef align generate -k 11 \"${input}\" $j >${j}.aligned.bed" 1>&2
 		echo "${TIME} -f'TIMING: %e %M' sedef align generate -k 11 \"${input}\" $j >${j}.aligned.bed 2>${output}/log/align/${k}.log"
+	    else
+		echo "${j}.aligned.bed already aligned " 1>&2
+	    fi
 	done | tee "${output}/align.comm" | ${TIME} -f'Aligning time: %E' parallel --will-cite -j "${jobs}" --bar --joblog "${output}/align.joblog"
 
 	proc=`cat "${output}/align.comm" | wc -l`
 	echo "SD alignment done: finished ${proc} jobs!"
 
 	proc_ok=`grep Finished ${output}/log/align/*.log | wc -l`
-	if [ "${proc}" != "${proc_ok}" ]; then
+	if [ "${proc}" -gt  "${proc_ok}" ]; then
 		echo "Error: launched ${proc} jobs but completed only ${proc_ok} jobs; exiting..."
 		exit 2
 	fi

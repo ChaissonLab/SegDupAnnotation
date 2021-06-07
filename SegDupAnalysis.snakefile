@@ -19,6 +19,10 @@ bamFiles={f.split("/")[-1]: f for f in config["reads_bam"] }
 
 localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, LinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked
 
+import shutil
+onsuccess:
+    shutil.rmtree(".snakemake")
+    
 rule all:
     input:
         fai=assembly+".fai",
@@ -134,7 +138,7 @@ rule AlignBam:
         load=16
     shell:"""
 mkdir -p aligned
-{params.sd}/Cat.sh {input.bam} | lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
+{params.sd}/Cat.sh {input.bam} | /home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
    samtools sort -T {params.temp}/asm.$$ -@2 -m2G -o {output.aligned}
 
 #samtools view -h -F 2304 {input.bam} | samtools fastq - | 
@@ -435,7 +439,7 @@ module load parallel
 module load time
 export PATH=$PATH:{params.sd}/sedef
 
-sedef.sh -f {input.asm} -j 16 
+{params.sd}/sedef.sh  {input.asm} -j 12
 """
 
 #
