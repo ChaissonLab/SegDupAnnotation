@@ -62,7 +62,7 @@ else:
         params:
             sd=SD,
         shell:"""
-    ln -s {input} {output}
+cd hmm; ln -s cov.bed cov.no_subread.bed
     """
 rule MakeIntersect:
     input:
@@ -71,9 +71,9 @@ rule MakeIntersect:
         bins=protected("hmm/coverage.bins.bed.gz"),
     params:
         asm=config["asm"],
+        sd=SD
     shell:"""
-bedtools makewindows -b <( awk 'BEGIN {{OFS="\\t"}} {{print $1,0,$2}} ' {params.asm}.fai) -w 100 | bedtools sort > ref_windows.bed
-intersectBed -sorted -c -a ref_windows.bed -b {input.bed}| bgzip -c > {output.bins}
+{params.sd}/BedToCoverage.py {input.bed} 100 {params.asm}.fai | bgzip -c > {output.bins}
 tabix -C {output.bins}
 """
 
