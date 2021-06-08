@@ -139,7 +139,7 @@ rule AlignBam:
     shell:"""
 mkdir -p aligned
 {params.sd}/Cat.sh {input.bam} | /home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
-   samtools sort -T {params.temp}/asm.$$ -@2 -m2G -o {output.aligned}
+   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
 
 #samtools view -h -F 2304 {input.bam} | samtools fastq - | 
 """
