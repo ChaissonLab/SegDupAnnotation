@@ -138,7 +138,10 @@ rule AlignBam:
         load=16
     shell:"""
 mkdir -p aligned
-{params.sd}/Cat.sh {input.bam} | /home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
+#{params.sd}/Cat.sh {input.bam} | /home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
+#   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
+
+{params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a  | \
    samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
 
 #samtools view -h -F 2304 {input.bam} | samtools fastq - | 
