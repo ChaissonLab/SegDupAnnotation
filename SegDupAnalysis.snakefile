@@ -1082,7 +1082,7 @@ rule CombineDuplicatedGenesWithCoordinates:
         grid_opts=config["grid_small"]
     shell:"""
 cat gencode.mapped.bam.bed12.dups |  \
-  $mchaisso/projects/VGP/SimplifyNameInBed12.py | \
+  {params.sd}/SimplifyNameInBed12.py | \
   awk '{{ print $4"\\t"$(NF-1) "\\t" $1 "\\t" $2 "\\t" $3"\\t1\\tcollapse";}}' > {output.comb}.tmp
 
 cat genes_in_resolved_dups.one_isoform.bed.sam.filt.bed12 | \
