@@ -653,8 +653,8 @@ rule IntersectGenesWithFullSDList:
     shell:"""
 na=`head -1 {input.dups} | awk '{{ print NF;}}'`
 nb=`head -1 {input.refGenes} | awk '{{ print NF;}}'`
-tot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
-bedtools intersect -a {input.refGenes} -b {input.dups} -f 1 -wb | awk -vt=$tot '{{ if (NF == t) print;}}'  {output.fullDup}
+tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
+bedtools intersect -a {input.refGenes} -b {input.dups} -f 1 -wb | awk -vt=$tot '{{ if (NF == t) print;}}' > {output.fullDup}
 """
 
 rule ResolvedDupsWithGenes:
@@ -998,9 +998,9 @@ rule FindResolvedDupliatedGenes:
 
 na=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
 nb=`head -1 {input.sedef} | awk '{{ print NF;}}'`
-tot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
+tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
 bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | \
-  awk -vt=$tot '{{ if (NF == t) print; }} | \
+  awk -vt=$tot '{{ if (NF == t) print; }}' | \
   awk '{{ if ($13 != ".") print; }}' | \
   bedtools sort >  {output.resdup}
 """
@@ -1045,7 +1045,13 @@ rule CombineGenesWithCollapsedDups:
     resources:
         load=1
     shell:"""
-samtools faidx {input.asm}
+if [ ! -e {input.asm}.fai ]; then
+ samtools faidx {input.asm}
+fi
+na=`head -1 {input.dups} | awk '{{ print NF;}}'`
+    nb=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
+tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
+
 bedtools intersect -f 1 -g {input.asm}.fai -sorted -loj -a {input.rnabed} -b {input.dups} | \
  awk '{{ if ($13 != ".") print;}}'| \
  bedtools sort >  {output.rnabedout}
@@ -1211,10 +1217,15 @@ rule FindGenesInResolvedDups:
     resources:
         load=1
     shell:"""
+
+na=`head -1 {input.notmasked} | awk '{{ print NF;}}'`
+nb=`head -1 {input.gencode} | awk '{{ print NF;}}'`
+tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
+
 cat '{input.notmasked}' | \
   awk '{{ print $0"\\t"NR; a=$1;b=$2;c=$3;d=$4;e=$5;f=$6; $1=d;$2=e;$3=f; $4=a;$5=b;$6=c; print $0"\\t"NR;}}' | \
     tr " " "\\t" | \
-    bedtools intersect -loj -a {input.gencode} -b stdin -f 1  | awk '{{ if ($13 != ".") print ;}}'  > {output.gencodeInDups}
+    bedtools intersect -loj -a {input.gencode} -b stdin -f 1  | awk '{{ if ($13 != ".") print ;}}'  | awk -vt=$tot '{{ if (NF==t) print;}}' > {output.gencodeInDups}
 
 """
 
@@ -1231,6 +1242,10 @@ rule SelectOneIsoform:
     resources:
         load=1
     shell:"""
+na=`head -1 {input.anyIsoform} | awk '{{ print NF;}}'`
+nb=`head -1 {input.falseTandem} | awk '{{ print NF;}}'`
+tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
+
 {params.sd}/FilterMembersFromSameIsoformSet.py {input.anyIsoform}  > {output.oneIsoform}
 bedtools intersect -v -a {output.oneIsoform} -b  {input.falseTandem} > {output.gencodeInDupsNotTandem}
 """
