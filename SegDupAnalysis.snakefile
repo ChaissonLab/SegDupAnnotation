@@ -297,7 +297,7 @@ cp \"{input.part}\" \"$TEMP/to_mask.{wildcards.region}.fasta\" && \
 pushd $TEMP &&  \
 RepeatMasker {params.repeatLibrary} -pa 8  -s -xsmall \"to_mask.{wildcards.region}.fasta\" && \
 popd && \
-cp $TEMP/$$/to_mask.\"{wildcards.region}\".fasta.* split/ || true
+cp $TEMP/to_mask.\"{wildcards.region}\".fasta.* split/ || true
 if [ ! -e split/to_mask.\"{wildcards.region}\".fasta.masked ]; then
   cp split/to_mask.\"{wildcards.region}\".fasta split/to_mask.\"{wildcards.region}\".fasta.masked
 fi
