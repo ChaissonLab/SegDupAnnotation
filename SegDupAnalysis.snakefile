@@ -651,8 +651,8 @@ rule IntersectGenesWithFullSDList:
     resources:
         load=1
     shell:"""
-na=`head -1 {input.dups} | awk '{ print NF;}'`
-nb=`head -1 {input.refGenes} | awk '{ print NF;}'`
+na=`head -1 {input.dups} | awk '{{ print NF;}}'`
+nb=`head -1 {input.refGenes} | awk '{{ print NF;}}'`
 tot=$(($na+$nb))
 bedtools intersect -a {input.refGenes} -b {input.dups} -f 1 -wb | awk -vt=$tot '{{ if (NF == t) print;}}'  {output.fullDup}
 """
@@ -995,8 +995,8 @@ rule FindResolvedDupliatedGenes:
     resources:
         load=1
     shell:"""
-na=`head -1 {input.rnabed} | awk '{ print NF;}'`
-nb=`head -1 {input.sedef} | awk '{ print NF;}'`
+na=`head -1 {input.rnabed} | awk '{{print NF;}}'`
+nb=`head -1 {input.sedef} | awk '{{ print NF;}}'`
 tot=$(($na + $nb ))
 bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | \
   awk -vt=$tot '{{ if (NF == t) print; }} | \
