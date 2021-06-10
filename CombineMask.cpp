@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
 		cerr << ks[0]->name.s<< endl;
 		for (int j = 1; j < ks.size(); j++) {
 			if (kseq_read(ks[j]) == 0) {
-				cout << "ERROR, could not fetch sequence " << ks[0]->name.s << " from " << fastaFiles[j] << endl;
+				cout << "ERROR, could not fetch sequence " << ks[0]->name.s << " from " << fileNames[j] << endl;
 				exit(0);
 			}
 			if (strcmp(ks[j]->name.s, ks[0]->name.s) != 0) {

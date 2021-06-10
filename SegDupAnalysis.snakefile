@@ -995,9 +995,10 @@ rule FindResolvedDupliatedGenes:
     resources:
         load=1
     shell:"""
+
 na=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
-nb=`head -1 {input.sedef} | awk '{{ print NF;}}'`
-tot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
+nb=`head -1 {input.sedef} | awk '{{ print NF;}}'`t
+ot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
 bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | \
   awk -vt=$tot '{{ if (NF == t) print; }} | \
   awk '{{ if ($13 != ".") print; }}' | \
