@@ -93,7 +93,7 @@ rule RunVitter:
     output:
         cov=protected("hmm/{contig}.viterout.txt"),
     params:
-        rd=RD,
+        sd=SD,
         contig_prefix="{contig}",
         scaler=config['scaler'],
         epsi=config['epsi']
@@ -101,7 +101,7 @@ rule RunVitter:
 mean=$(cat {input.avg})
 touch {output.cov}
 tabix {input.bins} {wildcards.contig} | cut -f 4 | \
-  {params.sd}/hmm/viterbi  /dev/stdin $mean hmm/{params.contig_prefix}
+{params.sd}/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} {params.scaler} {params.epsi}
 
 """
 
