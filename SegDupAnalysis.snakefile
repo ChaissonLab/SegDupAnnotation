@@ -46,7 +46,7 @@ rule all:
         resGeneNames="circos/genes_in_resolved_dups.links.names.tsv",
         filtSDResGeneLinks="circos_filtsd/genes_in_resolved_dups.links.tsv",
         filtSDResGeneNames="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
-#        plot="circos/circos.png",
+        plot="circos/circos.png",
         plotfilt="circos_filtsd/circos.png",
         splitAndSpliced=expand("genes_in_resolved_dups.one_isoform.{sp}.bed", sp=spliced),
         alignedIsoforms=expand("identity.{sp}.bed", sp=spliced),
@@ -651,9 +651,9 @@ rule IntersectGenesWithFullSDList:
     resources:
         load=1
     shell:"""
-na=`head -1 {input.dups} | awk '{ print NF;}'`
-nb=`head -1 {input.refGenes} | awk '{ print NF;}'`
-tot=$(($na+$nb))
+na=`head -1 {input.dups} | awk '{{ print NF;}}'`
+nb=`head -1 {input.refGenes} | awk '{{ print NF;}}'`
+tot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
 bedtools intersect -a {input.refGenes} -b {input.dups} -f 1 -wb | awk -vt=$tot '{{ if (NF == t) print;}}'  {output.fullDup}
 """
 
@@ -995,9 +995,9 @@ rule FindResolvedDupliatedGenes:
     resources:
         load=1
     shell:"""
-na=`head -1 {input.rnabed} | awk '{ print NF;}'`
-nb=`head -1 {input.sedef} | awk '{ print NF;}'`
-tot=$(($na + $nb ))
+na=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
+nb=`head -1 {input.sedef} | awk '{{ print NF;}}'`
+tot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
 bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | \
   awk -vt=$tot '{{ if (NF == t) print; }} | \
   awk '{{ if ($13 != ".") print; }}' | \
