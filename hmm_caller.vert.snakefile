@@ -93,8 +93,10 @@ rule RunVitter:
     output:
         cov=protected("hmm/{contig}.viterout.txt"),
     params:
-        sd=SD,
+        rd=RD,
         contig_prefix="{contig}",
+        scaler=config['scaler'],
+        epsi=config['epsi']
     shell:"""
 mean=$(cat {input.avg})
 touch {output.cov}
