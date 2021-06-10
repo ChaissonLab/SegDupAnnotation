@@ -997,8 +997,8 @@ rule FindResolvedDupliatedGenes:
     shell:"""
 
 na=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
-nb=`head -1 {input.sedef} | awk '{{ print NF;}}'`t
-ot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
+nb=`head -1 {input.sedef} | awk '{{ print NF;}}'`
+tot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
 bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | \
   awk -vt=$tot '{{ if (NF == t) print; }} | \
   awk '{{ if ($13 != ".") print; }}' | \
@@ -1094,7 +1094,7 @@ rule CombineDuplicatedGenesWithCoordinates:
         grid_opts=config["grid_small"]
     shell:"""
 cat gencode.mapped.bam.bed12.dups |  \
-  $mchaisso/projects/VGP/SimplifyNameInBed12.py | \
+  {params.sd}/SimplifyNameInBed12.py | \
   awk '{{ print $4"\\t"$(NF-1) "\\t" $1 "\\t" $2 "\\t" $3"\\t1\\tcollapse";}}' > {output.comb}.tmp
 
 cat genes_in_resolved_dups.one_isoform.bed.sam.filt.bed12 | \
