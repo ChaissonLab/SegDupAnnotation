@@ -19,9 +19,9 @@ bamFiles={f.split("/")[-1]: f for f in config["reads_bam"] }
 
 localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, LinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked
 
-import shutil
-onsuccess:
-    shutil.rmtree(".snakemake")
+#import shutil
+#onsuccess:
+#    shutil.rmtree(".snakemake")
     
 rule all:
     input:
@@ -122,6 +122,7 @@ def GetBam(f):
 #
 # Map individual bams separately
 #
+    
 rule AlignBam:
     input:
         bam=lambda wildcards: bamFiles[wildcards.base],
@@ -137,12 +138,12 @@ rule AlignBam:
     resources:
         load=16
     shell:"""
-mkdir -p aligned
+
 #{params.sd}/Cat.sh {input.bam} | /home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
 #   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
 
 {params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a  | \
-   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
+   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned} 
 
 #samtools view -h -F 2304 {input.bam} | samtools fastq - | 
 """
@@ -285,19 +286,22 @@ rule MaskFasta:
         mask="split/to_mask.{region}.fasta.masked"
     params:
         grid_opts=config["grid_medium"],
-        repeatLibrary=config["repeat_library"]
+        repeatLibrary=config["repeat_library"],
+        tmpdir=config["temp"]
     resources:
         load=8
     shell:"""
-mkdir -p $TMPDIR/$$
-cp \"{input.part}\" \"$TMPDIR/$$/to_mask.{wildcards.region}.fasta\" && \
-pushd $TMPDIR/$$ &&  \
+TEMP="{params.tmpdir}/$$/"
+mkdir -p $TEMP
+cp \"{input.part}\" \"$TEMP/to_mask.{wildcards.region}.fasta\" && \
+pushd $TEMP &&  \
 RepeatMasker {params.repeatLibrary} -pa 8  -s -xsmall \"to_mask.{wildcards.region}.fasta\" && \
 popd && \
-cp $TMPDIR/$$/to_mask.\"{wildcards.region}\".fasta.* split/ || true
+cp $TEMP/$$/to_mask.\"{wildcards.region}\".fasta.* split/ || true
 if [ ! -e split/to_mask.\"{wildcards.region}\".fasta.masked ]; then
   cp split/to_mask.\"{wildcards.region}\".fasta split/to_mask.\"{wildcards.region}\".fasta.masked
 fi
+rm -rf $TEMP
 """
 
         
@@ -519,7 +523,7 @@ rule CountRepeatedEntries:
     resources:
         load=1
     shell:"""
-bedtools intersect -loj -a {input.missed} -b {input.missed} -sorted -f 0.9 -r | bedtools groupby -g 1-5 -c 2 -o count | awk '{{ print $NF;}}' > {output.counted}
+bedtools intersect -loj -a {input.missed} -b {input.missed} -sorted -f 0.9 -r | bedtools groupby -g 1-6 -c 2 -o count | awk '{{ print $NF;}}' > {output.counted}
 """
 
 
@@ -647,7 +651,10 @@ rule IntersectGenesWithFullSDList:
     resources:
         load=1
     shell:"""
-bedtools intersect -a {input.refGenes} -b {input.dups} -f 1 -wb > {output.fullDup}
+na=`head -1 {input.dups} | awk '{{ print NF;}}'`
+nb=`head -1 {input.refGenes} | awk '{{ print NF;}}'`
+tot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
+bedtools intersect -a {input.refGenes} -b {input.dups} -f 1 -wb | awk -vt=$tot '{{ if (NF == t) print;}}'  {output.fullDup}
 """
 
 rule ResolvedDupsWithGenes:
@@ -988,7 +995,12 @@ rule FindResolvedDupliatedGenes:
     resources:
         load=1
     shell:"""
+
+na=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
+nb=`head -1 {input.sedef} | awk '{{ print NF;}}'`t
+ot=`awk -va=$na -vb=$nb '{{ print a+b;}}'`
 bedtools intersect -a {input.rnabed} -b {input.sedef} -loj -f 1 | \
+  awk -vt=$tot '{{ if (NF == t) print; }} | \
   awk '{{ if ($13 != ".") print; }}' | \
   bedtools sort >  {output.resdup}
 """

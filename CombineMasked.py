@@ -18,10 +18,22 @@ inFiles=ifl.readlines()
 
 for line in inFiles:
 
-
+    print(line)
     tmp=open(line.rstrip())
-    header=tmp.readline()[1:]
-    [chrom, annot]=header.split(" ")
+    try:
+        header=tmp.readline()[1:]
+    except ValueError:
+        import pdb
+        pdb.set_trace()
+
+    h=header.split(" ")
+    if len(h) != 2:
+        import pdb
+        pdb.set_trace()
+    
+    [chrom, annot]=h
+
+        
     
     annotVals=annot.split("/")
 
