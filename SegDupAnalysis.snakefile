@@ -1052,7 +1052,12 @@ na=`head -1 {input.dups} | awk '{{ print NF;}}'`
     nb=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
 tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
 
+na=`head -1 {input.dups} | awk '{{ print NF;}}'`
+nb=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
+tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
+
 bedtools intersect -f 1 -g {input.asm}.fai -sorted -loj -a {input.rnabed} -b {input.dups} | \
+awk -vt=$tot '{{ if (NF == t) print; }}' | \
  awk '{{ if ($13 != ".") print;}}'| \
  bedtools sort >  {output.rnabedout}
 

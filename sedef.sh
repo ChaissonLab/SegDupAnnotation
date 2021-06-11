@@ -172,6 +172,7 @@ if [ ! -f "${output}/bucket.joblog.ok" ] || [ "${force}" == "y" ]; then
 	echo "Running SD alignment..."
 
 	mkdir -p "${output}/align"
+
 	${TIME} -f'Bucketing time: %E' sedef align bucket -n 1000 "${output}/seeds" "${output}/align" "${input}" 2>"${output}/log/bucket.log"
 
 	if [ $? -ne 0 ]; then
