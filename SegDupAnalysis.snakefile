@@ -1225,7 +1225,7 @@ rule FindGenesInResolvedDups:
 
 na=`head -1 {input.notmasked} | awk '{{ print NF;}}'`
 nb=`head -1 {input.gencode} | awk '{{ print NF;}}'`
-tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
+tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b+1;}}'`
 
 cat '{input.notmasked}' | \
   awk '{{ print $0"\\t"NR; a=$1;b=$2;c=$3;d=$4;e=$5;f=$6; $1=d;$2=e;$3=f; $4=a;$5=b;$6=c; print $0"\\t"NR;}}' | \
