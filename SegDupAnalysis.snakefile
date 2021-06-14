@@ -291,7 +291,7 @@ rule MaskFasta:
     resources:
         load=8
     shell:"""
-TEMP="{params.tmpdir}/$$/"
+TEMP="{params.tmpdir}/$$_$RANDOM/"
 mkdir -p $TEMP
 cp \"{input.part}\" \"$TEMP/to_mask.{wildcards.region}.fasta\" && \
 pushd $TEMP &&  \
@@ -329,7 +329,7 @@ rule CombineMasked:
         masked="assembly.repeat_masked.fasta",
         maskedout="assembly.repeat_masked.fasta.out"
     params:
-        grid_opts=config["grid_medium"],
+        grid_opts=config["grid_large"],
         sd=SD
     resources:
         load=1
