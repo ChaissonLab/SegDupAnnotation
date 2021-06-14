@@ -1,4 +1,4 @@
-all: comask bemask mask2bed nl toupper sedef/sedef
+all: comask bemask mask2bed nl toupper sedef/sedef hmcnc/HMM/viterbi
 
 
 htslib/lib/libhts.a:
@@ -7,6 +7,8 @@ htslib/lib/libhts.a:
 sedef/sedef:
 	cd sedef && make -j 4
 
+hmcnc/HMM/viterbi:
+	cd hmcnc/HMM && snakemake -s make.smk.py --config boost=$(CONDA_PREFIX)/include -j 1 -p
 
 toupper: ToUpper.cpp htslib/lib/libhts.a
 	g++ -O2  $< -o $@  -I htslib/include -Lhtslib/lib -lhts -Wl,-rpath,$(PWD)/htslib/lib  -lhts -lz -lpthread

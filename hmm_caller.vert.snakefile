@@ -8,10 +8,8 @@ import json
 SD = os.path.dirname(workflow.snakefile)
 
 
-#config("hmm_caller.json")
 configfile: "sd_analysis.json"
 
-outdir="hmm"
 
 fai= open(config["asm"]+".fai")
 contigs = [l.split()[0].strip().replace("|","_") for l in fai]
@@ -39,7 +37,7 @@ rule MakeCovBed:
         sd=SD,
     shell:"""
 mkdir -p hmm
-samtools view -q 10 -F 2304 -@ 3 {input.bam} | {params.sd}/hmm/samToBed /dev/stdin/ --useH --flag   > {output.bed}
+samtools view -q 10 -F 2304 -@ 3 {input.bam} | hmcnc/HMM/samToBed /dev/stdin/ --useH --flag   > {output.bed}
 """
 
 if config['index_params']==" -CLR":    
@@ -101,7 +99,7 @@ rule RunVitter:
 mean=$(cat {input.avg})
 touch {output.cov}
 tabix {input.bins} {wildcards.contig} | cut -f 4 | \
-{params.sd}/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} {params.scaler} {params.epsi}
+hmcnc/HMM/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} {params.scaler} {params.epsi}
 
 """
 
@@ -146,8 +144,8 @@ rule PlotBins:
         sd=SD,
         genome_prefix="{prefix_bam}",
     shell:"""
-touch {output.plot}
+#touch {output.plot}
 #plot every 50000 points ~ 5MB
-#Rscript {params.sd}/plot.HMM.noclip.R {input.allCN} {params.genome_prefix} 50000 {input.avg}
-touch {output.plot}
+Rscript hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm/{params.genome_prefix} 50000 {input.avg}
+#touch {output.plot}
 """
