@@ -37,7 +37,7 @@ rule MakeCovBed:
         sd=SD,
     shell:"""
 mkdir -p hmm
-samtools view -q 10 -F 2304 -@ 3 {input.bam} | hmcnc/HMM/samToBed /dev/stdin/ --useH --flag   > {output.bed}
+samtools view -q 10 -F 2304 -@ 3 {input.bam} | {params.sd}/hmcnc/HMM/samToBed /dev/stdin/ --useH --flag   > {output.bed}
 """
 
 if config['index_params']==" -CLR":    

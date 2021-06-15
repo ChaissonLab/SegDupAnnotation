@@ -133,12 +133,14 @@ if [ ! -f "${output}/seeds.joblog.ok" ] || [ "${force}" == "y" ]; then
 	for j in `seq 0 $((numchrs - 1))`; do # reference
 		for i in `seq $j $((numchrs - 1))`; do # query; query < reference
 		    for m in n y ; do
+			echo "Checking ${output}/seeds/${i}_${j}_${m}.bed" 1>&2
 			if [ ! -e "${output}/seeds/${i}_${j}_${m}.bed" ]; then
-			     if [[  "$m" == "y"  && ( rc="-r" || rc="" ) ]]; then
-									echo "${TIME} -f'TIMING: %e %M' sedef search -k 12 -w 16 ${rc} ${input} -t $i $j >${output}/seeds/${i}_${j}_${m}.bed 2>${output}/log/seeds/${i}_${j}_${m}.log"
+			    if [[  "$m" == "y"  && ( rc="-r" || rc="" ) ]]; then
+				echo " sedef search -k 12 -w 16 ${rc} ${input} -t $i $j " 1>&2
+				echo "${TIME} -f'TIMING: %e %M' sedef search -k 12 -w 16 ${rc} ${input} -t $i $j >${output}/seeds/${i}_${j}_${m}.bed 2>${output}/log/seeds/${i}_${j}_${m}.log"
 								    fi
 								     else
-									 echo "${output}/seeds/${i}_${j}_${m}.bed already seeds" 1>&2
+									 echo "${output}/seeds/${i}_${j}_${m}.bed already exists" 1>&2
 									
 			fi
 			done
@@ -172,7 +174,7 @@ if [ ! -f "${output}/bucket.joblog.ok" ] || [ "${force}" == "y" ]; then
 	echo "Running SD alignment..."
 
 	mkdir -p "${output}/align"
-
+	echo sedef align bucket -n 1000 "${output}/seeds" "${output}/align" "${input}"
 	${TIME} -f'Bucketing time: %E' sedef align bucket -n 1000 "${output}/seeds" "${output}/align" "${input}" 2>"${output}/log/bucket.log"
 
 	if [ $? -ne 0 ]; then
