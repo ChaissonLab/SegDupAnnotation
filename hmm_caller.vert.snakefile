@@ -146,6 +146,6 @@ rule PlotBins:
     shell:"""
 #touch {output.plot}
 #plot every 50000 points ~ 5MB
-Rscript hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm/{params.genome_prefix} 50000 {input.avg}
+Rscript {params.sd}/hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm/{params.genome_prefix} 50000 {input.avg}
 #touch {output.plot}
 """
