@@ -25,7 +25,7 @@ minimap2 -a -x splice realign/orig.fasta realign/gene.fasta  > realign/aln.sam
 
 ch=`echo $line | tr " " "\t" | cut -f 13`
 pos=`echo $line | tr " " "\t" |  cut -f 14`
-cat realign/aln.sam | awk  -vchr="$ch" -vpos="$pos" '{ if (substr($1,0,1) != "@") { $3 = chr; $4+=pos-1; print; } }' | tr " " "\t" >> $output
+cat realign/aln.sam | awk  -vchr="$ch" -vpos="$pos" '{ if (substr($1,0,1) != "@") { if ($3 != "*") { $3 = chr; $4 +=pos-1; if ($4 < 0) { $4=0; }  print; } } }' | tr " " "\t" >> $output
 
 
 samtools faidx $assembly $dup > realign/ref.fasta
@@ -37,6 +37,6 @@ pos=`echo $line | tr " " "\t" |  cut -f 17`
 echo $ch
 echo $pos
 
-cat realign/aln.sam | awk  -vchr="$ch" -vpos="$pos" '{ if (substr($1,0,1) != "@") { $3 = chr; $4+=pos-1; print; } }' | tr " " "\t" >> $output
+cat realign/aln.sam | awk  -vchr="$ch" -vpos="$pos" '{ if (substr($1,0,1) != "@") { if ($3 != "*") {  $3 = chr; $4+=pos-1; if ($4 < 0) { $4=0; }  print; } } }' | tr " " "\t" >> $output
 
 done < $table
