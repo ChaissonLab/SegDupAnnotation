@@ -4,8 +4,8 @@ bedFile <- args[2]
 outFile <- args[3]
 #faiFile <- "assembly.orig.fasta.fai"
 #bedFile <- "sedef_out/final.sorted.bed.final.filt"
-fai <- read.table(faiFile)
-bed <- read.table(bedFile)
+fai <- read.table(faiFile, comment.char="")
+bed <- read.table(bedFile, comment.char="")
 minSize <- 2000000
 contigs <- which(fai$V2 > minSize)
 fai <- fai[contigs,]
