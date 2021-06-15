@@ -762,7 +762,7 @@ rule FiltDupToLinks:
         load=1
     shell:"""
 mkdir -p circos
-cat {input.bed} | {params.sd}/Bed12ToArcs.py {output.links} {output.names}
+cat {input.bed} | tr "#" "_" | {params.sd}/Bed12ToArcs.py {output.links} {output.names}
 """
 
 
@@ -779,7 +779,7 @@ rule FullDupToLinks:
         load=1
     shell:"""
 mkdir -p circos
-cat {input.bed} | {params.sd}/Bed12ToArcs.py {output.links} {output.names}
+cat {input.bed} | tr "#" "_" |  {params.sd}/Bed12ToArcs.py {output.links} {output.names}
 """
 
 rule RemapBed:
@@ -841,10 +841,10 @@ mkdir -p circos
 
 
 
-cat {input.coll} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
-
-cut -f 1 {input.asm}.fai | sed "s/_/__/g" > {input.asm}.display_name
-paste {input.asm}.fai {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}}  }}' > circos/karyotype.txt
+cat {input.coll} | tr "#" "_" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
+cat {input.asm}.fai | tr "#" "_" > {input.asm}.fai.u
+cut -f 1 {input.asm}.fai.u | sed "s/_/__/g" | tr "#" "_" > {input.asm}.display_name
+paste {input.asm}.fai.u {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}}  }}' > circos/karyotype.txt
 
 cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$4;}}' > circos/cn.lab.txt
 cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$5;}}' > circos/cn.txt
@@ -871,10 +871,10 @@ rule MakeCircOSHighIdentityDups:
     shell:"""
 mkdir -p circos_filtsd
 
-cat {input.coll} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
-
-cut -f 1 {input.asm}.fai | sed "s/_/__/g" > {input.asm}.display_name
-paste {input.asm}.fai {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}} }}' > circos_filtsd/karyotype.txt
+cat {input.coll} | tr "#" "_" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
+cat {input.asm}.fai | tr "#" "_" > {input.asm}.fai.u
+cut -f 1 {input.asm}.fai.u | sed "s/_/__/g" > {input.asm}.display_name
+paste {input.asm}.fai.u {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}} }}' > circos_filtsd/karyotype.txt
 
 cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$4;}}' > circos_filtsd/cn.lab.txt
 cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$5;}}' > circos_filtsd/cn.txt
