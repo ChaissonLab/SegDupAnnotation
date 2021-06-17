@@ -11,6 +11,7 @@ configfile: config['json']
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
 
+tempp="/scratch/rdagnew/tmp"
 
 assembly="assembly.orig.fasta"
 geneModel = config["genemodel"].keys()
@@ -296,7 +297,7 @@ rule MaskFasta:
     params:
         grid_opts=config["grid_medium"],
         repeatLibrary=config["repeat_library"],
-        tmpdir=config["temp"]
+        tmpdir=tempp
     resources:
         load=8
     shell:"""
