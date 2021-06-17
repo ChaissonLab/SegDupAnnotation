@@ -8,10 +8,12 @@ import json
 SD = os.path.dirname(workflow.snakefile)
 
 
-configfile: "sd_analysis.json"
+# Config
+configfile: config['json']
 
+assembly="assembly.orig.fasta"
 
-fai= open(config["asm"]+".fai")
+fai= open(assembly+".fai")
 contigs = [l.split()[0].strip().replace("|","_") for l in fai]
 bamt = config["bam"]
 bam = bamt.split("/")[-1]
