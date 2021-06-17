@@ -297,7 +297,7 @@ rule MaskFasta:
     params:
         grid_opts=config["grid_medium"],
         repeatLibrary=config["repeat_library"],
-        tmpdir=tempp
+        tmpdir=tempp,#separate tmp for maskFasta
     resources:
         load=8
     shell:"""
