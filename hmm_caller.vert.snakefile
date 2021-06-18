@@ -70,7 +70,7 @@ rule MakeIntersect:
     output:
         bins=protected("hmm/coverage.bins.bed.gz"),
     params:
-        asm=config["asm"],
+        asm=assembly,
         sd=SD
     shell:"""
 {params.sd}/BedToCoverage.py {input.bed} 100 {params.asm}.fai | bgzip -c > {output.bins}
