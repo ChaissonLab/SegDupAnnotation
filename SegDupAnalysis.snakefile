@@ -265,7 +265,7 @@ rule MaskFile:
 
 rule SplitGenome:
     input:
-        asm="assembly.masked.fasta"
+        asm="assembly.orig.fasta"
     output:
         split=dynamic("split/to_mask.{region}.fasta")
     params:
@@ -643,7 +643,7 @@ done < {input.tandem}.3  | awk -v m=$minCov '{{ if ($4 < m) print;}}' > {output.
 rule IntersectGenesWithFullSDList:
     input:
         dups="sedef_out/final.sorted.bed.final.filt",
-        refGenes="gencode.mapped.bam.bed12.iso_filt"
+        refGenes="gencode.mapped.bam.bed12"
     output:
         fullDup="genes_in_resolved_dups.one_isoform.full.bed",
     params:
@@ -815,7 +815,7 @@ samtools view {input.realignedOneIsoform} -o {input.realignedOneIsoform}.bam
 bedtools bamtobed -bed12 -i {input.realignedOneIsoform}.bam | \
   {params.sd}/SimplifyNameInBed12.py | \
   sort -k4,4 -k1,1 -k2,2n | \
-  bedtools groupby -g 1-3 -c 2 -o first -full > {output.b12}
+  bedtools groupby -g 1-3 -c 2 -o first -full | {params.sd}/RemoveOverlappingGenes.py >  {output.b12}
 
 
 grep -v "^@" {input.realignedOneIsoform} | awk '{{ for (i=1; i <= NF; i++) {{ if (substr($i,0,3) == "GR:") {{ print substr($i,6);}} }} }}' > groups.txt
@@ -1034,7 +1034,7 @@ bedtools bed12tobed6 -i {input.pre} > {output.post}
 #
 rule CombineGenesWithCollapsedDups:
     input:
-        rnabed="{data}.mapped.bam.bed12.iso_filt",
+        rnabed="{data}.mapped.bam.bed12",
         dups="collapsed_duplications.split.bed",
         asm="assembly.union_masked.fasta"
     output:
@@ -1059,10 +1059,15 @@ tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
 bedtools intersect -f 1 -g {input.asm}.fai -sorted -loj -a {input.rnabed} -b {input.dups} | \
 awk -vt=$tot '{{ if (NF == t) print; }}' | \
  awk '{{ if ($13 != ".") print;}}'| \
- bedtools sort >  {output.rnabedout}
+ bedtools sort | \
+ {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
+  {params.sd}/FilterLongestInOverlapSet.py stdin > {output.rnabedout}
 
 """
 
+#
+# Once genes have been identified in collapses, this annotates which collapses have genes.
+#
 rule GetCollapseWithGenes:
     input:
         genes="gencode.mapped.bam.bed12.dups",
@@ -1108,7 +1113,7 @@ cat gencode.mapped.bam.bed12.dups |  \
   {params.sd}/SimplifyNameInBed12.py | \
   awk '{{ print $4"\\t"$(NF-1) "\\t" $1 "\\t" $2 "\\t" $3"\\t1\\tcollapse";}}' > {output.comb}.tmp
 
-cat genes_in_resolved_dups.one_isoform.bed.sam.filt.bed12 | \
+cat {input.res} | \
    awk 'BEGIN {{p="";}} {{ if ($4 != p) {{ i=1; }} else {{ i+=1;}} print $4 "\\t1\\t" $1 "\\t" $2 "\\t" $3 "\\t" i"\\tresolved"; p=$4;}}' >> {output.comb}.tmp
 sort {output.comb}.tmp > {output.comb}
 rm {output.comb}.tmp
@@ -1214,11 +1219,12 @@ fi
 rule FindGenesInResolvedDups:
     input:
         notmasked="sedef_out/final.sorted.bed.final.filt",
-        gencode="gencode.mapped.bam.bed12.iso_filt"
+        gencode="gencode.mapped.bam.bed12"
     output:
         gencodeInDups="genes_in_resolved_dups.bed.filt",
     params:
-        grid_opts=config["grid_small"]
+        grid_opts=config["grid_small"],
+        sd=SD
     resources:
         load=1
     shell:"""
@@ -1230,7 +1236,9 @@ tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b+1;}}'`
 cat '{input.notmasked}' | \
   awk '{{ print $0"\\t"NR; a=$1;b=$2;c=$3;d=$4;e=$5;f=$6; $1=d;$2=e;$3=f; $4=a;$5=b;$6=c; print $0"\\t"NR;}}' | \
     tr " " "\\t" | \
-    bedtools intersect -loj -a {input.gencode} -b stdin -f 1  | awk '{{ if ($13 != ".") print ;}}'  | awk -vt=$tot '{{ if (NF==t) print;}}' > {output.gencodeInDups}
+    bedtools intersect -loj -a {input.gencode} -b stdin -f 1  | awk '{{ if ($13 != ".") print ;}}'  | awk -vt=$tot '{{ if (NF==t) print;}}' | \
+ {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
+  {params.sd}/FilterLongestInOverlapSet.py stdin >  {output.gencodeInDups}
 
 """
 

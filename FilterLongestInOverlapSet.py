@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 import sys
-inFile = open(sys.argv[1])
+if sys.argv[1] == "stdin":
+    inFile=sys.stdin
+else:
+    inFile = open(sys.argv[1])
+
 
 allVals = [line.split() for line in inFile.readlines()]
 
@@ -10,23 +14,6 @@ i=0
 def GetForwardCoordinates(aln):
 #    pdb.set_trace()
     return (int(aln[1]), int(aln[2]))
-
-
-
-
-def NodesOverlap(a,b):
-    if a.chrom != b.chrom:
-        return 0
-    la=a.end-a.start
-    lb=b.end-b.start
-    if (a.start <= b.start and a.end >= b.end):
-        ovp=min(b.enkd, a.end) - b.start
-    elif ( a.start >= b.start and a.start <= b.end):
-        ovp = min(b.end, a.end) - a.start
-
-
-    return max(ovp/la, ovp/lb)
-    
         
 def FractionOverlap(alnsA, alnsB):
     if alnsA[0] != alnsB[0]:
