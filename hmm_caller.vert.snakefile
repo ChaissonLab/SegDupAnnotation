@@ -8,10 +8,12 @@ import json
 SD = os.path.dirname(workflow.snakefile)
 
 
-configfile: "sd_analysis.json"
+# Config
+configfile: config['json']
 
+assembly="assembly.orig.fasta"
 
-fai= open(config["asm"]+".fai")
+fai= open(assembly+".fai")
 contigs = [l.split()[0].strip().replace("|","_") for l in fai]
 bamt = config["bam"]
 bam = bamt.split("/")[-1]
@@ -68,7 +70,7 @@ rule MakeIntersect:
     output:
         bins=protected("hmm/coverage.bins.bed.gz"),
     params:
-        asm=config["asm"],
+        asm=assembly,
         sd=SD
     shell:"""
 {params.sd}/BedToCoverage.py {input.bed} 100 {params.asm}.fai | bgzip -c > {output.bins}
