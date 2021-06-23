@@ -5,13 +5,12 @@ import os.path
 
 
 # Config
-configfile: config['json']
+configfile: "sd_analysis.json"
 
 
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
 
-tempp="/scratch/rdagnew/tmp"
 
 assembly="assembly.orig.fasta"
 geneModel = config["genemodel"].keys()
@@ -55,6 +54,7 @@ rule all:
 #        plotfilt="circos_filtsd/circos.png",
         splitAndSpliced=expand("genes_in_resolved_dups.one_isoform.{sp}.bed", sp=spliced),
         alignedIsoforms=expand("identity.{sp}.bed", sp=spliced),
+        sedef_high_ident="sedef_out/final.sorted.bed.low_copy.high_ident",
         sedef_filt="sedef_out/final.sorted.bed.final.filt",
 #        repmasked="assembly.repeat_masked.fasta",
 #        repmaskedOut="assembly.repeat_masked.fasta.out",
@@ -297,7 +297,7 @@ rule MaskFasta:
     params:
         grid_opts=config["grid_medium"],
         repeatLibrary=config["repeat_library"],
-        tmpdir=tempp,#separate tmp for maskFasta
+        tmpdir=config["temp"],
     resources:
         load=8
     shell:"""
@@ -395,11 +395,10 @@ rule RunDepthHmm:
     params:
         grid_opts=config["grid_large"],
         sd=SD,
-        js=config['json']
     resources:
         load=16
     shell:"""
-snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete --config json={params.js}
+snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete --config=sd_analysis.json
 """
 
 rule ConvertHMMCopyNumberToCollapsedDuplications:
@@ -506,7 +505,7 @@ rule FilterSedef:
     resources:
         load=1
     shell:"""
-awk  '{{ if ($8 <= 10) {{ print;}} }} ' > {output.filtered} < {input.bed}
+awk  '{{ if ($NF > 0.5) {{ print;}} }} ' > {output.filtered} < {input.bed}
 """
 
 #
