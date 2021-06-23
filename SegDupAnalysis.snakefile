@@ -11,10 +11,7 @@ configfile: "sd_analysis.json"
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
 
-<<<<<<< HEAD
-=======
 
->>>>>>> 9a68782903edd668e6c752c5a27c97feb4c62811
 
 assembly="assembly.orig.fasta"
 geneModel = config["genemodel"].keys()
@@ -301,11 +298,7 @@ rule MaskFasta:
     params:
         grid_opts=config["grid_medium"],
         repeatLibrary=config["repeat_library"],
-<<<<<<< HEAD
-        tmpdir=config["temp"],
-=======
         tmpdir=config["temp"],#provide separate tmp for maskFasta if fail
->>>>>>> 9a68782903edd668e6c752c5a27c97feb4c62811
     resources:
         load=8
     shell:"""
