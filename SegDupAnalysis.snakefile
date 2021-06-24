@@ -416,23 +416,61 @@ rule ConvertHMMCopyNumberToCollapsedDuplications:
     resources:
         load=1
     shell:"""
-cat {input.bed} | awk '{{ if ($5 > 3) print;}}' > {output.dups}
+cat {input.bed} | awk '{{ if ($5 > 2) print;}}' > {output.dups}
 """
 
 rule MakeCoverageBins:
     input:
         cb="collapsed_duplications.bed"
     output:
-        s="collapsed_duplications.split.bed"
+        cbcol="collapsed_duplications.bed.collapse",
+        s="collapsed_duplications.split.bed.pre"
     params:
         grid_opts=config["grid_small"],
         sd=SD
     resources:
         load=1
     shell:"""
-bedtools merge -i {input.cb} -c 5 -o collapse > {input.cb}.collapse
-{params.sd}/SplitCoverageBins.py {input.cb}.collapse | bedtools merge -c 4,4 -o min,max > {output.s}
+bedtools merge -i {input.cb} -c 5 -o collapse > {output.cbcol}
+{params.sd}/SplitCoverageBins.py {output.cbcol} | bedtools merge -c 4,4 -o min,max > {output.s}
 """
+
+rule Postcn3:
+    input:
+        s="collapsed_duplications.split.bed.pre"
+    output:
+        pre="pre_cn3.bed",
+        post="post_cn3.bed",
+        ss="collapsed_duplications.split.bed"
+    params:
+        grid_opts=config["grid_small"],
+        sd=SD,
+        bam=config['bam'],
+        asm=assembly,
+    resources:
+        load=1
+    shell:"""
+awk ' {{if ($4==$5 && $4==3) print;}}' {input.s} > {output.pre}
+
+for r in `cat {output.pre}|awk '{{print $1":"$2"-"$3}}' `;do
+    echo $r>region.txt
+    /project/mchaisso_100/cmb-16/rdagnew/summerproj/SegDupSNV/bamToFreq {params.bam} region.txt {params.asm} | \
+    python {params.sd}/het_check.py -r $r | tr ":-" "\t" >> {output.post}
+done
+
+
+"""
+
+rule filterCN3:
+    input:
+        post="post_cn3.bed",
+        s="collapsed_duplications.split.bed.pre"
+    output:
+        ss="collapsed_duplications.split.bed"
+    shell:"""
+intersectBed -v -a {input.s} -b <(grep fail {input.post} ) > {ouput.ss} 
+    """
+
 
 
 
@@ -1073,7 +1111,7 @@ if [ ! -e {input.asm}.fai ]; then
  samtools faidx {input.asm}
 fi
 na=`head -1 {input.dups} | awk '{{ print NF;}}'`
-    nb=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
+nb=`head -1 {input.rnabed} | awk '{{ print NF;}}'`
 tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
 
 bedtools intersect -f 1 -g {input.asm}.fai -sorted -loj -a {input.rnabed} -b {input.dups} | \
