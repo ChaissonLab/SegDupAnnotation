@@ -8,6 +8,12 @@ import os.path
 configfile: "sd_analysis.json"
 
 
+
+tempp=config['temp']
+if config['temp2']!="":
+    tempp=config['temp2']
+
+
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
 
@@ -296,7 +302,7 @@ rule MaskFasta:
     params:
         grid_opts=config["grid_medium"],
         repeatLibrary=config["repeat_library"],
-        tmpdir=config["temp"],
+        tmpdir=tempp,
     resources:
         load=8
     shell:"""
