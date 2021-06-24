@@ -11,11 +11,6 @@ configfile: "sd_analysis.json"
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 9a68782903edd668e6c752c5a27c97feb4c62811
-
 assembly="assembly.orig.fasta"
 geneModel = config["genemodel"].keys()
 
@@ -301,11 +296,7 @@ rule MaskFasta:
     params:
         grid_opts=config["grid_medium"],
         repeatLibrary=config["repeat_library"],
-<<<<<<< HEAD
         tmpdir=config["temp"],
-=======
-        tmpdir=config["temp"],#provide separate tmp for maskFasta if fail
->>>>>>> 9a68782903edd668e6c752c5a27c97feb4c62811
     resources:
         load=8
     shell:"""
@@ -621,12 +612,14 @@ rule FilterByGraphClusters:
         comps="sedef_out/final.sorted.bed.pairs.comps"
     output:
         filt="sedef_out/final.sorted.bed.final.filt",
+        sedef_high_ident="sedef_out/final.sorted.bed.low_copy.high_ident",        
     params:
         grid_opts=config["grid_small"]
     resources:
         load=1
     shell:"""
 paste {input.bed} {input.comps} | bioawk -c hdr '{{ if ($(NF-1) <= 20) print;}}' > {output.filt}
+touch {output.sedef_high_ident}
 """
 
 
