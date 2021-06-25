@@ -467,7 +467,7 @@ rule filterCN3:
     output:
         ss="collapsed_duplications.split.bed"
     shell:"""
-intersectBed -v -a {input.s} -b <(grep fail {input.post} ) > {ouput.ss} 
+intersectBed -v -a {input.s} -b <(grep fail {input.post} ) > {output.ss} 
     """
 
 
