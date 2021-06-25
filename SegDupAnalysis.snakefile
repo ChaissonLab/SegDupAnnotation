@@ -454,7 +454,7 @@ awk ' {{if ($4==$5 && $4==3) print;}}' {input.s} > {output.pre}
 
 for r in `cat {output.pre}|awk '{{print $1":"$2"-"$3}}' `;do
     echo $r>region.txt
-    /project/mchaisso_100/cmb-16/rdagnew/summerproj/SegDupSNV/bamToFreq {params.bam} region.txt {params.asm} | \
+    {params.sd}/bamToFreq {params.bam} region.txt {params.asm} | \
     python {params.sd}/het_check.py -r $r | tr ":-" "\t" >> {output.post}
 done
 
