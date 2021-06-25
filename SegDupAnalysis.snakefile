@@ -441,7 +441,6 @@ rule Postcn3:
     output:
         pre="pre_cn3.bed",
         post="post_cn3.bed",
-        ss="collapsed_duplications.split.bed"
     params:
         grid_opts=config["grid_small"],
         sd=SD,
