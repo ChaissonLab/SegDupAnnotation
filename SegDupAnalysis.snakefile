@@ -403,7 +403,7 @@ rule RunDepthHmm:
     resources:
         load=16
     shell:"""
-snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete --config=sd_analysis.json
+snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete 
 """
 
 rule ConvertHMMCopyNumberToCollapsedDuplications:
