@@ -499,7 +499,9 @@ rule lrt:
     resources:
         load=1
     shell:"""
+    echo "filtering cn3"
     for r in ` cat {input.reg} `;do
+        echo $r
         tabix {input.nf} $r |  python {params.sd}/het_check.ini.py -r $r | tr ":-" "\\t" >> {output}
     done
     
