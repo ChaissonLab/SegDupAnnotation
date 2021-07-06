@@ -25,6 +25,8 @@ spliced=[ "multi", "single"]
 
 bamFiles={f.split("/")[-1]: f for f in config["reads_bam"] }
 
+pos=[]
+
 
 localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, MakeFaiLinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked
 
@@ -93,7 +95,8 @@ rule all:
 #        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
-        sdDistPdf=config["species"]+".sd_dist.pdf"
+        sdDistPdf=config["species"]+".sd_dist.pdf",
+        post=expand("cn3/post_cn3.{p}.bed",p=pos),
 
 
 #
@@ -424,7 +427,7 @@ rule MakeCoverageBins:
         cb="collapsed_duplications.bed"
     output:
         cbcol="collapsed_duplications.bed.collapse",
-        s="collapsed_duplications.split.bed.pre"
+        s="pre.collapsed_duplications.split.bed"
     params:
         grid_opts=config["grid_small"],
         sd=SD
@@ -437,37 +440,61 @@ bedtools merge -i {input.cb} -c 5 -o collapse > {output.cbcol}
 
 rule Postcn3:
     input:
-        s="collapsed_duplications.split.bed.pre"
+        s="pre.collapsed_duplications.split.bed"
     output:
-        pre="pre_cn3.bed",
-        post="post_cn3.bed",
+        pre="pre_cn3.txt",
+        reg="cn3_region.txt"
+        nf="cn3.nucfreq.bed.gz"
     params:
         grid_opts=config["grid_small"],
         sd=SD,
         bam=config['bam'],
         asm=assembly,
+        temp=config['temp']
     resources:
         load=1
     shell:"""
-awk ' {{if ($4==$5 && $4==3) print;}}' {input.s} > {output.pre}
+awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} > {output.pre}
 
-for r in `cat {output.pre}|awk '{{print $1":"$2"-"$3}}' `;do
-    echo $r>region.txt
-    {params.sd}/bamToFreq {params.bam} region.txt {params.asm} | \
-    python {params.sd}/het_check.py -r $r | tr ":-" "\t" >> {output.post}
-done
+awk '{{print $1":"$2"-"$3}}' {output.pre} > {output.reg}
+
+{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' | sort -k1,1 -k2,2n -T {params.temp}| bgzip -c > {output.nf}
+
+tabix -C {output.nf}
 
 
 """
 
+
+rule getPos:
+    input:
+        reg="cn3_region.txt"
+    run:
+        with open(input.reg) as c:
+            for line in c.readlines():
+                line=line.rstrip()
+                pos.append(line)
+
+rule lrt:
+    input:
+        nf="cn3.nucfreq.bed.gz"
+    output:
+        post="cn3/post_cn3.{p}.bed"
+    shell:"""
+
+       tabix {input.nf} {wildcard.p} |  python {params.sd}/het_check.py -r {wildcard.p} | tr ":-" "\t" > {output.post}
+"""
+
+
+
 rule filterCN3:
     input:
-        post="post_cn3.bed",
-        s="collapsed_duplications.split.bed.pre"
+        post=expand("cn3/post_cn3.{p}.bed",p=pos),
+        s="pre.collapsed_duplications.split.bed"
     output:
         ss="collapsed_duplications.split.bed"
     shell:"""
-intersectBed -v -a {input.s} -b <(grep fail {input.post} ) > {output.ss} 
+intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss} 
     """
 
 
