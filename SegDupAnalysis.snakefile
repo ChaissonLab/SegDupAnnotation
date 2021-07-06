@@ -12,7 +12,7 @@ configfile: "sd_analysis.json"
 tempp=config['temp']
 if config['temp2']!="":
     tempp=config['temp2']
-
+print(tempp)
 
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
@@ -95,8 +95,8 @@ rule all:
 #        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
-        sdDistPdf=config["species"]+".sd_dist.pdf",
-        post=expand("cn3/post_cn3.{p}.bed",p=pos),
+       # sdDistPdf=config["species"]+".sd_dist.pdf",
+      #  post=dynamic("cn3/post_cn3.{p}.bed"),#,p=pos), #lambda wildcards: getPos("cn3_region.txt")),
 
 
 #
@@ -157,8 +157,8 @@ rule AlignBam:
         load=16
     shell:"""
 
-#{params.sd}/Cat.sh {input.bam} | /home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
-#   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
+#{params.sd}/Cat.sh {input.bam} | ./home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
+ #  samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
 
 {params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a  | \
    samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned} 
@@ -443,7 +443,7 @@ rule Postcn3:
         s="pre.collapsed_duplications.split.bed"
     output:
         pre="pre_cn3.txt",
-        reg="cn3_region.txt"
+        reg="cn3_region.txt",
         nf="cn3.nucfreq.bed.gz"
     params:
         grid_opts=config["grid_small"],
@@ -458,41 +458,66 @@ awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} > {output.pre}
 
 awk '{{print $1":"$2"-"$3}}' {output.pre} > {output.reg}
 
-{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' | sort -k1,1 -k2,2n -T {params.temp}| bgzip -c > {output.nf}
+{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' | sort -k1,1 -k2,2n -T {params.temp}| bgzip -c > {output.nf}
 
 tabix -C {output.nf}
 
 
 """
 
-
 rule getPos:
     input:
-        reg="cn3_region.txt"
+        reg="cn3_region.txt",
+    output:
+        done="getPos.done"
     run:
-        with open(input.reg) as c:
+        import sys
+        #pos=[]
+        with open(input.reg) as c, open("getPos.done",'w') as g:
             for line in c.readlines():
                 line=line.rstrip()
                 pos.append(line)
+            print(pos[0])
+            g.write("done")
+        print("getPos")
+
+        #print(pos[0]+"poss")
+        #return pos
 
 rule lrt:
     input:
-        nf="cn3.nucfreq.bed.gz"
+        nf="cn3.nucfreq.bed.gz",
+        reg="cn3_region.txt",
+        done="getPos.done",
+       # ps=lambda wildcards: pos[wildcards.p],
     output:
-        post="cn3/post_cn3.{p}.bed"
+        post="cn3/post_cn3.bed",
+    params:
+        grid_opts=config["grid_small"],
+        sd=SD,
+        #ps="{p}",
+    resources:
+        load=1
     shell:"""
-
-       tabix {input.nf} {wildcard.p} |  python {params.sd}/het_check.py -r {wildcard.p} | tr ":-" "\t" > {output.post}
+    for r in ` cat {input.reg} `;do
+        tabix {input.nf} $r |  python {params.sd}/het_check.ini.py -r $r | tr ":-" "\\t" >> {output}
+    done
+    
 """
 
 
 
 rule filterCN3:
     input:
-        post=expand("cn3/post_cn3.{p}.bed",p=pos),
+        post="cn3/post_cn3.bed",
+        #expand("cn3/post_cn3.{p}.bed",p=lambda wildcards: getPos("cn3_region.txt")),
         s="pre.collapsed_duplications.split.bed"
     output:
         ss="collapsed_duplications.split.bed"
+    resources:
+        load=1
+    params:
+        grid_opts=config["grid_small"],
     shell:"""
 intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss} 
     """
