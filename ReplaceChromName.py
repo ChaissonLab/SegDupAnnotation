@@ -15,5 +15,7 @@ else:
         for i in range(0,len(vals)):
             if vals[i] in nameMap:
                 vals[i] = nameMap[vals[i]]
+            elif "var" in vals[i] and vals[i][3:] in nameMap:
+                vals[i] = "var" + nameMap[vals[i][3:]]
         sys.stdout.write("\t".join(vals) + "\n")
         
