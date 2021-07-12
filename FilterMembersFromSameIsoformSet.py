@@ -16,7 +16,7 @@ for i in range(0,len(allVals)):
     #
     if geneIdx is None:
         for j in range(0,len(allVals[i])):
-            if len(allVals[i][j].split("|")) == 9:
+            if len(allVals[i][j].split("|")) >= 9:
                 geneIdx=j
                 break
     if geneIdx is None:

@@ -1,4 +1,4 @@
-all: comask bemask mask2bed nl toupper sedef/sedef hmcnc/HMM/viterbi
+all: comask bemask mask2bed nl toupper sedef/sedef hmcnc/HMM/viterbi bamToFreq
 
 
 htslib/lib/libhts.a:
@@ -28,3 +28,6 @@ countn: CountN.cpp
 
 nl: CountRep.cpp
 	g++ -O2 CountRep.cpp -o nl
+
+bamToFreq: BamToFreq.cpp $(CONDA_PREFIX)/lib/libhts.so
+	g++ -O3 $< -o $@ -I $(CONDA_PREFIX)/include -L $(CONDA_PREFIX)/lib -lhts -lpthread -lz -Wl,-rpath,$(CONDA_PREFIX)/lib
