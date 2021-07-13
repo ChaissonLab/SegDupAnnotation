@@ -10,9 +10,12 @@ configfile: "sd_analysis.json"
 
 
 tempp=config['temp']
+if "temp2" not in config:
+    config["temp2"] = config["temp"]
+    
 if config['temp2']!="":
     tempp=config['temp2']
-print(tempp)
+
 
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
@@ -62,7 +65,9 @@ rule all:
         filtSDResGeneLinks="circos_filtsd/genes_in_resolved_dups.links.tsv",
         filtSDResGeneNames="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
         combined_gencode="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined",
-        comb_with_unique="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map",        
+        comb_with_unique="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map",
+        comb_with_depth="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth",
+        gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count",        
         plot="circos/circos.png",
 #        plotfilt="circos_filtsd/circos.png",
         splitAndSpliced=expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.{sp}.bed", sp=spliced, sub=["all", "high_ident"]),
@@ -1785,6 +1790,47 @@ rule PlotIdeogram:
         sd=SD
     shell:"""
 Rscript {params.sd}/PlotIdeogram.R {input.fai} {input.bed} {output.pdf}
+"""
+
+rule SortDups:
+    input:
+        comb="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map",
+    output:
+        comb="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.sorted",
+    shell:"""
+bedtools sort -i {input.comb} > {output.comb}
+"""
+
+rule GetDepthOverDups:
+    input:
+        comb="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.sorted",
+        bins="hmm/coverage.bins.bed.gz",
+        avg="hmm/mean_cov.txt"
+    output:
+        depth="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth",
+    shell:"""
+m=`cat hmm/mean_cov.txt`
+
+bedtools intersect -loj -a {input.comb} -b {input.bins} -sorted | bedtools groupby -g 1-4 -c 10 -o mean | cut -f 4,5 | awk -v m=$m '{{ print $1"\\t"$2/m;}}' > {input.comb}.cn
+paste {input.comb} <( cut -f 2 {input.comb}.cn ) | sort -k4,4 > {output.depth}
+"""
+
+rule FilterLowDepthDups:
+    input:
+        depth="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth",
+    output:
+        depth_filt="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt",
+    shell:"""
+cat {input.depth} | awk '{{ if ($NF > 0.05) print;}}' > {output.depth_filt}
+"""
+
+rule GetFullGeneCountTable:
+    input:
+        depth_filt="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt",
+    output:
+        gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count",
+    shell:"""
+cat {input.depth_filt} | awk '{{ if ($5 == 0) {{ $5=1;}} print;}}' | tr " " "\\t" | bedtools groupby -g 4 -c 5 -o sum | awk '{{ if ($2 > 1) {{ print;}} }}' > {output.gene_count}
 """
 
 

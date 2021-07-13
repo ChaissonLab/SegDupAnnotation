@@ -25,8 +25,9 @@ while i < len(alns):
             dupNMatch=int(alns[k][10])
             if dupAlnLength / origGeneLength > 0.9 and origGeneLength / dupAlnLength > 0.9 and dupNMatch / dupAlnLength > 0.9:
                 matchIdx.append(k)
-        for k in matchIdx:            
-            sys.stdout.write("\t".join(alns[k]) + "\n")
+        if len(matchIdx) > 1:
+            for k in matchIdx:            
+                sys.stdout.write("\t".join(alns[k]) + "\n")
         d+=1
     i=j
                 

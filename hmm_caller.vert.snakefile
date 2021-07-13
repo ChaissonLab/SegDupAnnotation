@@ -34,7 +34,7 @@ rule MakeCovBed:
     input:
         bam=config["bam"],
     output:
-        bed=protected("hmm/cov.bed"),
+        bed="hmm/cov.bed",
     params:
         sd=SD,
     shell:"""
@@ -68,7 +68,7 @@ rule MakeIntersect:
     input:
         bed="hmm/cov.no_subread.bed",
     output:
-        bins=protected("hmm/coverage.bins.bed.gz"),
+        bins="hmm/coverage.bins.bed.gz",
     params:
         asm=assembly,
         sd=SD
@@ -91,7 +91,7 @@ rule RunVitter:
         avg="hmm/mean_cov.txt",
         bins="hmm/coverage.bins.bed.gz",
     output:
-        cov=protected("hmm/{contig}.viterout.txt"),
+        cov="hmm/{contig}.viterout.txt",
     params:
         sd=SD,
         contig_prefix="{contig}",
