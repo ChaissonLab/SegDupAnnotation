@@ -101,7 +101,7 @@ rule RunVitter:
 mean=$(cat {input.avg})
 touch {output.cov}
 tabix {input.bins} {wildcards.contig} | cut -f 4 | \
-{params.sd}/hmcnc/HMM/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} {params.scaler} {params.epsi} 1
+{params.sd}/hmcnc/HMM/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} {params.scaler} {params.epsi} 0
 
 """
 
