@@ -74,6 +74,7 @@ rule all:
         alignedIsoforms=expand("identity.{sp}.bed", sp=spliced),
         sedef_high_ident="sedef_out/high_ident/final.sorted.bed.final.filt",
         sedef_filt="sedef_out/all/final.sorted.bed.final.filt",
+        totalmasked=expand("sedef_out/{sub}/total_masked.txt", sub=["all", "high_ident"]),
 #        repmasked="assembly.repeat_masked.fasta",
 #        repmaskedOut="assembly.repeat_masked.fasta.out",
         dups="collapsed_duplications.bed",
@@ -107,7 +108,7 @@ rule all:
         counted="sedef_out/counted.tab",
         tandem_dups="sedef_out/tandem_dups.bed",
         low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",
-#        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
+        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
        # sdDistPdf=config["species"]+".sd_dist.pdf",
@@ -744,6 +745,14 @@ mkdir -p sedef_out/high_ident
 cat {input.filt} | awk '{{ if ($21 >= 0.98) print;}}' > {output.sedef_high_ident}
 """
 
+rule GetTotalMasked:
+    input:
+        filt="sedef_out/{cat}/final.sorted.bed.final.filt",
+    output:
+        total="sedef_out/{cat}/total_masked.txt"
+    shell:"""
+cat {input.filt} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"; print $4"\\t"$5"\\t"$6; }}'  | bedtools sort | bedtools merge | awk '{{ s+= $3-$2;}} END {{ print s;}}' > {output.total}
+"""
 
 
 rule AnnotateResolvedTandemDups:

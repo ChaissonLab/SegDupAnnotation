@@ -7,7 +7,7 @@ htslib/lib/libhts.a:
 sedef/sedef:
 	cd sedef && make -j 4
 
-hmcnc/HMM/viterbi:
+hmcnc/HMM/viterbi: hmcnc/HMM/viterbi.cpp
 	cd hmcnc/HMM && snakemake -s make.smk.py --config boost=$(CONDA_PREFIX)/include -j 1 -p
 
 toupper: ToUpper.cpp htslib/lib/libhts.a
