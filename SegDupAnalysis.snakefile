@@ -30,8 +30,9 @@ bamFiles={f.split("/")[-1]: f for f in config["reads_bam"] }
 
 pos=[]
 
+subs=["all", "high_ident"]
 
-localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, MakeFaiLinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups
+localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, MakeFaiLinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig
 
 #import shutil
 #onsuccess:
@@ -71,11 +72,13 @@ rule all:
         asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
         plot="circos/circos.png",
 #        plotfilt="circos_filtsd/circos.png",
-        splitAndSpliced=expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.{sp}.bed", sp=spliced, sub=["all", "high_ident"]),
+        splitAndSpliced=expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.{sp}.bed", sp=spliced, sub=subs),
         alignedIsoforms=expand("identity.{sp}.bed", sp=spliced),
         sedef_high_ident="sedef_out/high_ident/final.sorted.bed.final.filt",
         sedef_filt="sedef_out/all/final.sorted.bed.final.filt",
-        totalmasked=expand("sedef_out/{sub}/total_masked.txt", sub=["all", "high_ident"]),
+        sedef_merged=expand("sedef_out/{sub}/final_filt.merged.bed", sub=subs),
+        totalmasked=expand("sedef_out/{sub}/total_masked.txt", sub=subs),
+        dupPerContig=expand("sedef_out/{cat}/final_filt.by_contig.bed", cat=subs),
 #        repmasked="assembly.repeat_masked.fasta",
 #        repmaskedOut="assembly.repeat_masked.fasta.out",
         dups="collapsed_duplications.bed",
@@ -108,7 +111,7 @@ rule all:
 #        IsoSeq=expand("IsoSeq/{dataset}.bam", dataset=list(config["IsoSeq"].keys())),
         counted="sedef_out/counted.tab",
         tandem_dups="sedef_out/tandem_dups.bed",
-        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",
+        low_cov_tandem_dups=expand("sedef_out/{sub}/tandem_dups.low_cov.bed",sub=subs),
         asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
@@ -753,6 +756,36 @@ rule GetTotalMasked:
         total="sedef_out/{cat}/total_masked.txt"
     shell:"""
 cat {input.filt} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"; print $4"\\t"$5"\\t"$6; }}'  | bedtools sort | bedtools merge | awk '{{ s+= $3-$2;}} END {{ print s;}}' > {output.total}
+"""
+
+rule GetFinalMerged:
+    input:
+        filt="sedef_out/{cat}/final.sorted.bed.final.filt",
+    output:
+        merged="sedef_out/{cat}/final_filt.merged.bed"
+    shell:"""
+cat {input.filt} | awk '{{ print $1"\\t"$2"\\t"$3; print $4"\\t"$5"\\t"$6;}}' | bedtools sort | bedtools merge > {output.merged}
+"""
+
+rule DupsPerContig:
+    input:
+        merged="sedef_out/{cat}/final_filt.merged.bed",
+        asm="assembly.orig.fasta"        
+    output:
+        dupPerContig="sedef_out/{cat}/final_filt.by_contig.bed",
+    shell:"""
+set +e
+while read line; do
+    name=`echo $line | awk '{{ print $1;}}' `
+    len=`echo $line | awk '{{ print $2; }}' `
+    grep -q $name {input.merged}
+    if [ $? -eq 0 ]; then
+      n=`grep $name {input.merged} | awk '{{ s+=$3-$2; }} END {{ print s;}}'`
+    else
+      n="0"
+    fi
+    echo -e "$name\\t$len\\t$n"
+done < {input.asm}.fai > {output.dupPerContig}
 """
 
 
@@ -1403,7 +1436,7 @@ cat '{input.notmasked}' | \
 rule SelectOneIsoform:
     input:
         anyIsoform="sedef_out/{sub}/genes_in_resolved_dups.bed.filt",
-        falseTandem="sedef_out/tandem_dups.low_cov.bed",
+        falseTandem="sedef_out/{sub}/tandem_dups.low_cov.bed",
     output:
         oneIsoform="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt",
         gencodeInDupsNotTandem     = "sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt.not_tandem",
@@ -1675,7 +1708,7 @@ rule SelectDupsOneIsoform:
     params:
         sd=SD
     shell:"""
-cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | {params.sd}/SimplifyName.py   | sort > {output.iso}
+cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | {params.sd}/SimplifyName.py | bedtools groupby -g 1,6,8,9 -c 1 -o first -full | cut -f 1-12 | sort > {output.iso}
 """
 
 rule GetGeneCoverage:
@@ -1687,9 +1720,10 @@ rule GetGeneCoverage:
         cov="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.bed.txt",
         bed="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.bed"
     params:
-        sd=SD
+        sd=SD,
+        grid_opts=config["grid_small"]
     shell:"""
-cat {input.iso} | awk '{{ print $6"\\t"$8"\\t"$9"\\t"$0;}}' > {input.iso}.bed
+cat {input.iso} | awk '{{ print $6"\\t"$8"\\t"$9"\\t"$0;}}' | bedtools groupby -g 1-3 -o first -full -c 1 >  {input.iso}.bed
 {params.sd}/GetCoverageOfRegions.sh {input.iso}.bed {input.bins} {input.mean} 
 """
 
@@ -1711,8 +1745,7 @@ rule AddCollapsedGenes:
         coll="collapsed_dups_with_genes.bed"
     output:
         colm="collapsed_dups_with_genes.bed.not_multimapped",
-        colx="collapsed_dups_with_genes.bed.exclusive",        
-        
+        colx="collapsed_dups_with_genes.bed.exclusive",                
     params:
         sd=SD
     shell:"""
@@ -1839,7 +1872,7 @@ rule GetFullGeneCountTable:
         depth_filt="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt",
     output:
         gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count",
-        gene_count_asm="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",        
+        asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",        
     shell:"""
 cat {input.depth_filt} | awk '{{ $5=1; print;}}' | tr " " "\\t" | bedtools groupby -g 4 -c 5 -o sum | awk '{{ if ($2 > 1) {{ print;}} }}' > {output.asm_gene_count}
 

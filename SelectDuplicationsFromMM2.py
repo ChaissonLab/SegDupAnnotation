@@ -27,7 +27,7 @@ while i < len(alns):
                 matchIdx.append(k)
         if len(matchIdx) > 1:
             for k in matchIdx:            
-                sys.stdout.write("\t".join(alns[k]) + "\n")
+                sys.stdout.write("\t".join(alns[k][0:12]) + "\n")
         d+=1
     i=j
                 
