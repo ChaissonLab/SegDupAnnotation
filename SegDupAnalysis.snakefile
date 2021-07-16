@@ -1660,6 +1660,8 @@ rule GetGeneBoundaryFasta:
         asm="assembly.orig.fasta"
     output:
         fa="{data}.mapped.bam.bed12.fasta",        
+    params:
+        grid_opts=config["grid_small"],
     shell:"""
 cat {input.bed} | awk '{{ print $1":"$2"-"$3;}}' > {input.bed}.rgn
 samtools faidx {input.asm} -r {input.bed}.rgn > {output.fa}
