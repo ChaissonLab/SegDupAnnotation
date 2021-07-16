@@ -1685,6 +1685,8 @@ rule MapNamed:
         mapped="{data}.mapped.bam.bed12.fasta.named.mm2",
     params:
         grid_opts=config["grid_large"]
+    resources:
+        load=12
     shell:"""
 minimap2 {input.asm} {input.fa} -t 12 > {output.mapped}
 """
