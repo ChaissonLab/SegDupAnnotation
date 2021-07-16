@@ -466,40 +466,40 @@ rule Postcn3:
         reg="cn3_region.txt",
         nf="cn3.nucfreq.bed.gz"
     params:
-        grid_opts=config["grid_small"],
+        grid_opts=config["grid_medium"],
         sd=SD,
         bam=config['bam'],
         asm=assembly,
         temp=config['temp']
     resources:
-        load=1
+        load=4
     shell:"""
 awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} > {output.pre}
 
 awk '{{print $1":"$2"-"$3}}' {output.pre} > {output.reg}
 
-{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' | sort -k1,1 -k2,2n -T {params.temp}| bgzip -c > {output.nf}
+{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' | sort --parallel 4 -k1,1 -k2,2n -T {params.temp}| bgzip -c > {output.nf}
 
 tabix -C {output.nf}
 
 
 """
 
-rule getPos:
-    input:
-        reg="cn3_region.txt",
-    output:
-        done="getPos.done"
-    run:
-        import sys
+#rule getPos:
+ #   input:
+ #       reg="cn3_region.txt",
+ #   output:
+ #       done="getPos.done"
+ #   run:
+ #       import sys
         #pos=[]
-        with open(input.reg) as c, open("getPos.done",'w') as g:
-            for line in c.readlines():
-                line=line.rstrip()
-                pos.append(line)
-            print(pos[0])
-            g.write("done")
-        print("getPos")
+ #       with open(input.reg) as c, open("getPos.done",'w') as g:
+ #           for line in c.readlines():
+ #               line=line.rstrip()
+ #               pos.append(line)
+ #           print(pos[0])
+ #           g.write("done")
+ #       print("getPos")
 
         #print(pos[0]+"poss")
         #return pos
@@ -508,7 +508,7 @@ rule lrt:
     input:
         nf="cn3.nucfreq.bed.gz",
         reg="cn3_region.txt",
-        done="getPos.done",
+     #   done="getPos.done",
        # ps=lambda wildcards: pos[wildcards.p],
     output:
         post="cn3/post_cn3.bed",
@@ -519,6 +519,7 @@ rule lrt:
     resources:
         load=1
     shell:"""
+    rm -f {output}
     echo "filtering cn3"
     for r in ` cat {input.reg} `;do
         echo $r
@@ -547,17 +548,19 @@ intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss}
 
 
 
-#rule RemoveBams:
-#    input:
-#        bam=config['bam'],
-#        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
-#        s="collapsed_duplications.split.bed"
-#    params:
-#        grid_opts=config["grid_small"],
-#    shell:"""
-#
-# rm {input.bam}
-#    """
+rule RemoveBams:
+    input:
+        bam=config['bam'],
+        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
+        s="collapsed_duplications.split.bed",
+        aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
+        asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
+    params:
+        grid_opts=config["grid_small"],
+    shell:"""
+
+ rm {input.aln}
+    """
 
 #
 # The following rules do the initial resolved repeat detection with
