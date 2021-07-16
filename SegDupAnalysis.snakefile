@@ -472,7 +472,7 @@ rule Postcn3:
         asm=assembly,
         temp=config['temp']
     resources:
-        load=4
+        load=1
     shell:"""
 awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} | sort -k1,1 -k2,2n > {output.pre}
 
