@@ -32,7 +32,7 @@ pos=[]
 
 subs=["all", "high_ident"]
 
-localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, MakeFaiLinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig
+localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, MakeFaiLinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes
 
 #import shutil
 #onsuccess:
@@ -471,7 +471,7 @@ rule Postcn3:
         reg="cn3_region.txt",
         nf="cn3.nucfreq.bed.gz"
     params:
-        grid_opts=config["grid_small"],
+        grid_opts=config["grid_blat"],
         sd=SD,
         bam=config['bam'],
         asm=assembly,
@@ -479,32 +479,32 @@ rule Postcn3:
     resources:
         load=1
     shell:"""
-awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} > {output.pre}
+awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} | sort -k1,1 -k2,2n > {output.pre}
 
 awk '{{print $1":"$2"-"$3}}' {output.pre} > {output.reg}
 
-{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' | sort -k1,1 -k2,2n -T {params.temp}| bgzip -c > {output.nf}
+{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' |  bgzip -c > {output.nf}
 
 tabix -C {output.nf}
 
 
 """
 
-rule getPos:
-    input:
-        reg="cn3_region.txt",
-    output:
-        done="getPos.done"
-    run:
-        import sys
+#rule getPos:
+ #   input:
+ #       reg="cn3_region.txt",
+ #   output:
+ #       done="getPos.done"
+ #   run:
+ #       import sys
         #pos=[]
-        with open(input.reg) as c, open("getPos.done",'w') as g:
-            for line in c.readlines():
-                line=line.rstrip()
-                pos.append(line)
-            print(pos[0])
-            g.write("done")
-        print("getPos")
+ #       with open(input.reg) as c, open("getPos.done",'w') as g:
+ #           for line in c.readlines():
+ #               line=line.rstrip()
+ #               pos.append(line)
+ #           print(pos[0])
+ #           g.write("done")
+ #       print("getPos")
 
         #print(pos[0]+"poss")
         #return pos
@@ -513,7 +513,7 @@ rule lrt:
     input:
         nf="cn3.nucfreq.bed.gz",
         reg="cn3_region.txt",
-        done="getPos.done",
+     #   done="getPos.done",
        # ps=lambda wildcards: pos[wildcards.p],
     output:
         post="cn3/post_cn3.bed",
@@ -524,6 +524,7 @@ rule lrt:
     resources:
         load=1
     shell:"""
+    rm -f {output}
     echo "filtering cn3"
     for r in ` cat {input.reg} `;do
         echo $r
@@ -552,17 +553,19 @@ intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss}
 
 
 
-#rule RemoveBams:
-#    input:
-#        bam=config['bam'],
-#        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
-#        s="collapsed_duplications.split.bed"
-#    params:
-#        grid_opts=config["grid_small"],
-#    shell:"""
-#
-# rm {input.bam}
-#    """
+rule RemoveBams:
+    input:
+        bam=config['bam'],
+        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
+        s="collapsed_duplications.split.bed",
+        aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
+        asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
+    params:
+        grid_opts=config["grid_small"],
+    shell:"""
+
+ rm {input.aln}
+    """
 
 #
 # The following rules do the initial resolved repeat detection with
@@ -1688,6 +1691,8 @@ rule GetGeneBoundaryFasta:
         asm="assembly.orig.fasta"
     output:
         fa="{data}.mapped.bam.bed12.fasta",        
+    params:
+        grid_opts=config["grid_small"],
     shell:"""
 cat {input.bed} | awk '{{ print $1":"$2"-"$3;}}' > {input.bed}.rgn
 samtools faidx {input.asm} -r {input.bed}.rgn > {output.fa}
@@ -1713,6 +1718,8 @@ rule MapNamed:
         mapped="{data}.mapped.bam.bed12.fasta.named.mm2",
     params:
         grid_opts=config["grid_large"]
+    resources:
+        load=12
     shell:"""
 minimap2 {input.asm} {input.fa} -t 12 > {output.mapped}
 """
