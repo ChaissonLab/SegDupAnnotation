@@ -466,7 +466,7 @@ rule Postcn3:
         reg="cn3_region.txt",
         nf="cn3.nucfreq.bed.gz"
     params:
-        grid_opts=config["grid_medium"],
+        grid_opts=config["grid_blat"],
         sd=SD,
         bam=config['bam'],
         asm=assembly,
@@ -474,11 +474,11 @@ rule Postcn3:
     resources:
         load=4
     shell:"""
-awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} > {output.pre}
+awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} | sort -k1,1 -k2,2n > {output.pre}
 
 awk '{{print $1":"$2"-"$3}}' {output.pre} > {output.reg}
 
-{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' | sort --parallel 4 -k1,1 -k2,2n -T {params.temp}| bgzip -c > {output.nf}
+{params.sd}/bamToFreq {params.bam} {output.reg} {params.asm}| awk 'BEGIN{{OFS="\\t"}} {{print $1,$2,$2+1,$3,$4,$5,$6; }} ' |  bgzip -c > {output.nf}
 
 tabix -C {output.nf}
 
