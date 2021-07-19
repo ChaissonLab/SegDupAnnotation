@@ -1061,34 +1061,34 @@ grep -v "^@" {input.realignedOneIsoform} | awk '{{ for (i=1; i <= NF; i++) {{ if
 bedtools groupby -g 4 -c 4 -i {output.b12} -o count > {output.counts}
 """
 
-rule MakeCircOS:
-    input:
-        asm="assembly.orig.fasta",
-        coll="gencode.mapped.bam.bed12.dups.unique",
-        links="circos/genes_in_resolved_dups.links.tsv",
-        names="circos/genes_in_resolved_dups.links.names.tsv"
-    output:
-        plt="circos/circos.png"
-    params:
-        sd=SD,
-        grid_opts=config["grid_medium"],
-        name_map=config["name_map"]
-    resources:
-       load=1
-    shell:"""
-mkdir -p circos
-cat {input.coll} | tr "#" "_" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
-cat {input.asm}.fai | tr "#" "_" > {input.asm}.fai.u
-cut -f 1 {input.asm}.fai.u | sed "s/_/__/g" | tr "#" "_" > {input.asm}.display_name
-paste {input.asm}.fai.u {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}}  }}' | \
-  {params.sd}/ReplaceChromName.py {params.name_map} >  circos/karyotype.txt
+#rule MakeCircOS:
+#    input:
+#        asm="assembly.orig.fasta",
+#       coll="gencode.mapped.bam.bed12.dups.unique",
+#        links="circos/genes_in_resolved_dups.links.tsv",
+#        names="circos/genes_in_resolved_dups.links.names.tsv"
+#    output:
+#        plt="circos/circos.png"
+#    params:
+#        sd=SD,
+#        grid_opts=config["grid_medium"],
+#        name_map=config["name_map"]
+#    resources:
+#       load=1
+#    shell:"""
+#mkdir -p circos
+#cat {input.coll} | tr "#" "_" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
+#cat {input.asm}.fai | tr "#" "_" > {input.asm}.fai.u
+#cut -f 1 {input.asm}.fai.u | sed "s/_/__/g" | tr "#" "_" > {input.asm}.display_name
+#paste {input.asm}.fai.u {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}}  }}' | \
+ # {params.sd}/ReplaceChromName.py {params.name_map} >  circos/karyotype.txt
 
-cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$4;}}' | {params.sd}/ReplaceChromName.py {params.name_map} > circos/cn.lab.txt
-cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$5;}}' | {params.sd}/ReplaceChromName.py {params.name_map} > circos/cn.txt
+#cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$4;}}' | {params.sd}/ReplaceChromName.py {params.name_map} > circos/cn.lab.txt
+#cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$5;}}' | {params.sd}/ReplaceChromName.py {params.name_map} > circos/cn.txt
 
 #{params.sd}/MakeDup.py --bed {input.coll}  --collapsed {input.coll}.name.cn --links circos/resolved_dups.txt --labels circos/resolved_dups.labels.txt
-cd circos && circos --conf {params.sd}/circos.conf 
-"""
+#cd circos && circos --conf {params.sd}/circos.conf 
+#"""
 
 
 #rule MakeCircOSHighIdentityDups:
