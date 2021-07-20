@@ -75,7 +75,7 @@ rule all:
         gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count",
         asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
         gene_count_2column="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count_multi_single",        
-        plot="circos/circos.png",
+       # plot="circos/circos.png",
 #        plotfilt="circos_filtsd/circos.png",
         splitAndSpliced=expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.{sp}.bed", sp=spliced, sub=subs),
         alignedIsoforms=expand("identity.{sp}.bed", sp=spliced),
