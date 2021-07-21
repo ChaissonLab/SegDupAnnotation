@@ -1496,7 +1496,7 @@ rule AlignIsoforms:
     input:
         asm="assembly.union_masked.fasta",
         refGenes=config["genemodel"]["gencode"],
-        dups="genes_in_resolved_dups.one_isoform.{sp}.bed"
+        dups="sedef_out/high_ident/genes_in_resolved_dups.one_isoform.{sp}.bed"
     output:
         alignedIsoforms="identity.{sp}.bed",
     params:
