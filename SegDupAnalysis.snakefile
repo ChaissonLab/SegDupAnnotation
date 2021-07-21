@@ -65,10 +65,10 @@ rule all:
         realignedOneIsoformFull    = expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.full.sam", sub=subs),
         realignedOneIsoformFullBed = expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.full.sam.bed12", sub=subs),
         geneDups=expand("sedef_out/{sub}/resolved_dups_with_genes.bed", sub=["all", "high_ident"]),
-        resGeneLinks="circos/genes_in_resolved_dups.links.tsv",
-        resGeneNames="circos/genes_in_resolved_dups.links.names.tsv",
-        filtSDResGeneLinks="circos_filtsd/genes_in_resolved_dups.links.tsv",
-        filtSDResGeneNames="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
+      #  resGeneLinks="circos/genes_in_resolved_dups.links.tsv",
+      #  resGeneNames="circos/genes_in_resolved_dups.links.names.tsv",
+      #  filtSDResGeneLinks="circos_filtsd/genes_in_resolved_dups.links.tsv",
+      #  filtSDResGeneNames="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
         combined_gencode="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined",
         comb_with_unique="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map",
         comb_with_depth="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth",
@@ -974,38 +974,38 @@ rule FiltDupToBed12:
 bedtools bamtobed -bed12 -i {input.realignedOneIsoform} | {params.sd}/SimplifyNameInBed12.py | sort -k4,4 -k1,1 -k2,2n | bedtools groupby -g 1-3 -c 2 -o first -full > {output.bed}
 """
 
-rule FiltDupToLinks:
-    input:
-        bed="sedef_out/high_ident/genes_in_resolved_dups.one_isoform.bed.filt.sam.high_ident.bed12",
-    output:
-        links="circos_filtsd/genes_in_resolved_dups.links.tsv",
-        names="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
-    params:
-        sd=SD,
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-mkdir -p circos
-cat {input.bed} | tr "#" "_" | {params.sd}/Bed12ToArcs.py {output.links} {output.names}
-"""
+#rule FiltDupToLinks:
+#    input:
+#        bed="sedef_out/high_ident/genes_in_resolved_dups.one_isoform.bed.filt.sam.high_ident.bed12",
+#    output:
+#        links="circos_filtsd/genes_in_resolved_dups.links.tsv",
+#        names="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
+#    params:
+#        sd=SD,
+#        grid_opts=config["grid_small"]
+#    resources:
+#        load=1
+#    shell:"""
+#mkdir -p circos
+#cat {input.bed} | tr "#" "_" | {params.sd}/Bed12ToArcs.py {output.links} {output.names}
+#"""
 
 
-rule FullDupToLinks:
-    input:
-        bed="sedef_out/high_ident/genes_in_resolved_dups.one_isoform.bed.full.sam.bed12",
-    output:
-        links="circos/genes_in_resolved_dups.links.tsv",
-        names="circos/genes_in_resolved_dups.links.names.tsv"
-    params:
-        sd=SD,
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-mkdir -p circos
-cat {input.bed} | tr "#" "_" |  {params.sd}/Bed12ToArcs.py {output.links} {output.names}
-"""
+#rule FullDupToLinks:
+#    input:
+#        bed="sedef_out/high_ident/genes_in_resolved_dups.one_isoform.bed.full.sam.bed12",
+#    output:
+#        links="circos/genes_in_resolved_dups.links.tsv",
+#        names="circos/genes_in_resolved_dups.links.names.tsv"
+#    params:
+#        sd=SD,
+#        grid_opts=config["grid_small"]
+#    resources:
+#        load=1
+#    shell:"""
+#mkdir -p circos
+#cat {input.bed} | tr "#" "_" |  {params.sd}/Bed12ToArcs.py {output.links} {output.names}
+#"""
 
 rule RemapBed:
     input:
