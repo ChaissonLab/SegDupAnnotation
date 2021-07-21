@@ -555,19 +555,6 @@ intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss}
 
 
 
-rule RemoveBams:
-    input:
-        bam=config['bam'],
-        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
-        s="collapsed_duplications.split.bed",
-        aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
-        asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
-    params:
-        grid_opts=config["grid_small"],
-    shell:"""
-
- rm {input.aln}
-    """
 
 #
 # The following rules do the initial resolved repeat detection with
@@ -1933,3 +1920,16 @@ cat {input.depth_filt} | awk '{{ if ($5 == 0) {{ $5=1;}} print;}}' | tr " " "\\t
 
 
 
+rule RemoveBams:
+    input:
+        bam=config['bam'],
+        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
+        s="collapsed_duplications.split.bed",
+        aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
+        asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
+    params:
+        grid_opts=config["grid_small"],
+    shell:"""
+touch file.done
+ rm {input.aln}
+    """
