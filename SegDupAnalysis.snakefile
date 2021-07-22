@@ -1170,7 +1170,7 @@ cut -f 4 {input.bed} | sort | uniq -c | awk '{{ if ($1 > 1) print $2;}}' > {inpu
 rule GetGencodeMappedInDup:
     input:
         gencodeRes="gencode.mapped.multicopy.bed",
-        dups="sedef_out/final.sorted.bed.final.filt"
+        dups="sedef_out/high_ident/final.sorted.bed.final.filt"
     output:
         inDup="gencode.mapped.multicopy.in_duplication.bed"
     params:
@@ -1221,7 +1221,7 @@ cat {input.sup} | \
 rule FindResolvedDupliatedGenes:
     input:
         rnabed="{data}.mapped.bam.bed12.iso_filt",
-        sedef="sedef_out/final.sorted.bed.final.filt",
+        sedef="sedef_out/high_ident/final.sorted.bed.final.filt",
     output:
         resdup="{data}.mapped.resolved_dups.bed"
     params:
@@ -1853,7 +1853,7 @@ done  >> {output.aln}
 rule PlotIdeogram:
     input:
         fai="assembly.orig.fasta.fai",
-        bed="sedef_out/final.sorted.bed.final.filt"
+        bed="sedef_out/high_ident/final.sorted.bed.final.filt"
     output:
         pdf=config["species"] + ".sd_dist.pdf"
     params:
