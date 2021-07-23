@@ -7,6 +7,42 @@ import os.path
 # Config
 configfile: "sd_analysis.json"
 
+RD = config["scr"]
+
+ASM=RD+"/annotation/hg38.fa.fai"
+REP=RD+"/annotation/repeatMask.merged.bed"
+GEN=RD+"/annotation/gencode.gene.bed"
+
+#config("hmm_caller.json")
+
+
+#configfile: config["configfile"]
+if config["outdir"]==".":
+    outdir="hmm"
+else:
+    outdir=config["outdir"]+"/hmm"
+
+fai= open(ASM)
+
+contigs = [l.split()[0].strip().replace("|","_") for l in fai]
+
+#fofn
+
+bamt =  config["bam"]
+
+bamm = bamt.split("/")[-1]
+prefix_bam = os.path.splitext(bamm)[0]
+
+
+ep=config["epsi"]
+
+
+cov=config["coverage"]
+#mask=config["repeatMask"]
+
+sub=config["subread"]
+mq=config["mq"]
+ml=config["minL"]
 
 
 tempp=config['temp']
