@@ -30,7 +30,7 @@ contigs = [l.split()[0].strip().replace("|","_") for l in fai]
 
 ep=config["epsi"]
 
-
+config["ref_windows"]="/project/mchaisso_100/projects/HPRC/ref_windows.bed"
 
 tempp=config['temp']
 if "temp2" not in config:
@@ -189,7 +189,7 @@ cd hmm_ref; ln -s cov.bed cov.no_subread.bed
  
 rule MakeIntersect:
     input:
-        windows=config["ref_window"],  ## add to json
+        windows=config["ref_windows"],  ## add to json
         bed="hmm_ref/cov.no_subread.bed",
     output:
         bins="hmm_ref/coverage.bins.bed.gz",
