@@ -7,42 +7,29 @@ import os.path
 # Config
 configfile: "sd_analysis.json"
 
-RD = config["scr"]
 
-ASM=RD+"/annotation/hg38.fa.fai"
-REP=RD+"/annotation/repeatMask.merged.bed"
-GEN=RD+"/annotation/gencode.gene.bed"
+# Snakemake and working directories
+SD = os.path.dirname(workflow.snakefile)
+
+assm="/project/mchaisso_100/shared/references/hg38_noalts/hg38.no_alts.fasta"
+
+
+
+
+ASM=SD+"hmcnc/HMM/annotation/hg38.fa.fai"
+REP=SD+"hmcnc/HMM/annotation/repeatMask.merged.bed"
+GEN=SD+"hmcnc/HMM/annotation/gencode.gene.bed"
 
 #config("hmm_caller.json")
-
-
-#configfile: config["configfile"]
-if config["outdir"]==".":
-    outdir="hmm"
-else:
-    outdir=config["outdir"]+"/hmm"
 
 fai= open(ASM)
 
 contigs = [l.split()[0].strip().replace("|","_") for l in fai]
 
-#fofn
-
-bamt =  config["bam"]
-
-bamm = bamt.split("/")[-1]
-prefix_bam = os.path.splitext(bamm)[0]
 
 
 ep=config["epsi"]
 
-
-cov=config["coverage"]
-#mask=config["repeatMask"]
-
-sub=config["subread"]
-mq=config["mq"]
-ml=config["minL"]
 
 
 tempp=config['temp']
@@ -51,12 +38,6 @@ if "temp2" not in config:
     
 if config['temp2']!="":
     tempp=config['temp2']
-
-
-# Snakemake and working directories
-SD = os.path.dirname(workflow.snakefile)
-
-assm="/project/mchaisso_100/shared/references/hg38_noalts/hg38.no_alts.fasta"
 
 
 
@@ -69,18 +50,13 @@ rule all:
     input:
         fai=assm+".fai",
         bam=config["bam"],
-        bed="hmm/cov.bed",
-        no_subreadbed="hmm/cov.no_subread.bed",
-        bins="hmm/coverage.bins.bed.gz",
-        avg="hmm/mean_cov.txt",
-        vitterout=expand("hmm/{ctg}.viterout.txt", ctg=contigs),
-        cn=expand("hmm/copy_number.{ctg}.bed", ctg=contigs),
-        allCN="hmm/copy_number.tsv",
-#        plot=expand("hmm/{bm}.noclip.pdf",bm=prefix_bam),
-
-
-
-
+        bed="hmm_ref/cov.bed",
+        no_subreadbed="hmm_ref/cov.no_subread.bed",
+        bins="hmm_ref/coverage.bins.bed.gz",
+        avg="hmm_ref/mean_cov.txt",
+        vitterout=expand("hmm_ref/{ctg}.viterout.txt", ctg=contigs),
+        cn=expand("hmm_ref/copy_number.{ctg}.bed", ctg=contigs),
+        allCN="hmm_ref/copy_number.tsv",
         dups="collapsed_duplications.bed",
 
 # Simple preprocessing, make sure there is an index on the assembly.
@@ -100,7 +76,7 @@ rule MakeFaiLinkOrig:
         load=1
     shell:"""
 ln -s {input.asm} ./{output.orig}
-samtools faidx {output.orig}
+ln -s {params.sd}/hmcnc/HMM/annotation/hg38.fa.fai {output.orig}
 """
 
 
@@ -179,20 +155,19 @@ rule MakeCovBed:
     input:
         bam="ref_aligned.bam",
     output:
-        bed="hmm/cov.bed",
+        bed="hmm_ref/cov.bed",
     params:
         sd=SD,
     shell:"""
-mkdir -p hmm
 samtools view -q 10 -F 2304 -@ 3 {input.bam} | {params.sd}/hmcnc/HMM/samToBed /dev/stdin/ --useH --flag   > {output.bed}
 """
 
 if config['index_params']==" -CLR":    
     rule FilterSubreads:
         input:
-            bed="hmm/cov.bed",
+            bed="hmm_ref/cov.bed",
         output:
-            covbed="hmm/cov.no_subread.bed",
+            covbed="hmm_ref/cov.no_subread.bed",
         params:
             sd=SD,
         shell:"""
@@ -201,13 +176,13 @@ if config['index_params']==" -CLR":
 else:
     rule FilterSubreads0:
         input:
-            bed="hmm/cov.bed",
+            bed="hmm_ref/cov.bed",
         output:
-            covbed="hmm/cov.no_subread.bed",
+            covbed="hmm_ref/cov.no_subread.bed",
         params:
             sd=SD,
         shell:"""
-cd hmm; ln -s cov.bed cov.no_subread.bed
+cd hmm_ref; ln -s cov.bed cov.no_subread.bed
     """
 
 
@@ -215,9 +190,9 @@ cd hmm; ln -s cov.bed cov.no_subread.bed
 rule MakeIntersect:
     input:
         windows=config["ref_window"],  ## add to json
-        bed="hmm/cov.no_subread.bed",
+        bed="hmm_ref/cov.no_subread.bed",
     output:
-        bins="hmm/coverage.bins.bed.gz",
+        bins="hmm_ref/coverage.bins.bed.gz",
     params:
         asm=assm,
         sd=SD
@@ -229,19 +204,19 @@ tabix -C {output.bins}
 
 rule GetMeanCoverage:
     input:
-        bins="hmm/coverage.bins.bed.gz",
+        bins="hmm_ref/coverage.bins.bed.gz",
     output:
-        avg="hmm/mean_cov.txt",
+        avg="hmm_ref/mean_cov.txt",
     shell:"""
 zcat {input.bins} | awk 'BEGIN{{OFS="\\t";c=0;sum=0;}} sum=sum+$4;c=c+1;END{{print sum/c;}}' | tail -1> {output.avg}
 """
 
 rule RunVitter:
     input:
-        avg="hmm/mean_cov.txt",
-        bins="hmm/coverage.bins.bed.gz",
+        avg="hmm_ref/mean_cov.txt",
+        bins="hmm_ref/coverage.bins.bed.gz",
     output:
-        cov="hmm/{contig}.viterout.txt",
+        cov="hmm_ref/{contig}.viterout.txt",
     params:
         sd=SD,
         contig_prefix="{contig}",
@@ -251,16 +226,16 @@ rule RunVitter:
 mean=$(cat {input.avg})
 touch {output.cov}
 tabix {input.bins} {wildcards.contig} | cut -f 4 | \
-{params.sd}/hmcnc/HMM/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} {params.scaler} {params.epsi} 0
+{params.sd}/hmcnc/HMM/viterbi  /dev/stdin $mean hmm_ref/{params.contig_prefix} {params.scaler} {params.epsi} 0
 
 """
 
 rule orderVitter:
     input:
-        CopyNumber="hmm/{contig}.viterout.txt",
-        bins="hmm/coverage.bins.bed.gz",
+        CopyNumber="hmm_ref/{contig}.viterout.txt",
+        bins="hmm_ref/coverage.bins.bed.gz",
     output:
-        cn="hmm/copy_number.{contig}.bed",
+        cn="hmm_ref/copy_number.{contig}.bed",
     shell:"""
 
 paste <(tabix  {input.bins} {wildcards.contig} ) <(cat {input.CopyNumber}  ) > {output.cn}
@@ -269,9 +244,9 @@ paste <(tabix  {input.bins} {wildcards.contig} ) <(cat {input.CopyNumber}  ) > {
 
 rule combineVitter:
     input:
-        allCopyNumberBED=expand("hmm/copy_number.{contig}.bed", contig=contigs),
+        allCopyNumberBED=expand("hmm_ref/copy_number.{contig}.bed", contig=contigs),
     output:
-        allCN="hmm/copy_number.tsv",
+        allCN="hmm_ref/copy_number.tsv",
     run:
         import sys
         sys.stderr.write("Writing " + str(output.allCN) + "\n")
@@ -288,27 +263,26 @@ rule combineVitter:
 ## prefix bam
 rule PlotBins:
     input:
-        allCN="hmm/copy_number.tsv",
+        allCN="hmm_ref/copy_number.tsv",
         #aln=config["aln"],
-        avg="hmm/mean_cov.txt",
+        avg="hmm_ref/mean_cov.txt",
     output:
-        plot="hmm/{prefix_bam}.noclip.pdf",
+        plot="hmm_ref/ref_genome.noclip.pdf",
     params:
         sd=SD,
-        genome_prefix="{prefix_bam}",
     shell:"""
 #touch {output.plot}
 #plot every 50000 points ~ 5MB
-Rscript {params.sd}/hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm/{params.genome_prefix} 50000 {input.avg}
+Rscript {params.sd}/hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm_ref/ref_genome 50000 {input.avg}
 #touch {output.plot}
 """
 
 
 rule ConvertHMMCopyNumberToCollapsedDuplications:
     input:
-        bed="hmm/copy_number.tsv"
+        bed="hmm_ref/copy_number.tsv"
     output:
-        dups="hmm/collapsed_duplications.bed"
+        dups="hmm_ref/collapsed_duplications.bed"
     params:
         grid_opts=config["grid_small"]
     resources:
@@ -319,10 +293,10 @@ cat {input.bed} | awk '{{ if ($5 > 2) print;}}' > {output.dups}
 
 rule MakeCoverageBins:
     input:
-        cb="hmm/collapsed_duplications.bed"
+        cb="hmm_ref/collapsed_duplications.bed"
     output:
-        cbcol="hmm/collapsed_duplications.bed.collapse",
-        s="hmm/pre.collapsed_duplications.split.bed"
+        cbcol="hmm_ref/collapsed_duplications.bed.collapse",
+        s="hmm_ref/pre.collapsed_duplications.split.bed"
     params:
         grid_opts=config["grid_small"],
         sd=SD
@@ -337,37 +311,36 @@ bedtools merge -i {input.cb} -c 5 -o collapse > {output.cbcol}
 
 rule repeatMask:
     input:
-        call="{outdir}/hmm_ref/DUPcalls.copy_number.tsv",
+        call="hmm_ref/DUPcalls.copy_number.tsv",
     output:
-        maskedcall="{outdir}/hmm_ref/DUPcalls.masked_CN.tsv",
-        inter="{outdir}/hmm_ref/DUPcalls.rep_int.bed",
+        maskedcall="hmm_ref/DUPcalls.masked_CN.tsv",
+        inter="hmm_ref/DUPcalls.rep_int.bed",
     params:
-        rep=REP,#config['repeatMask'],
-        mnl=config["minL"],
-        rd=RD,
+        rep=REP,
+        sd=SD,
     shell:"""
 
-    intersectBed -wa -wb -a <( awk '$4>2' {input.call} |cut -f 1-3) -b {params.rep} |sort -k1,1 -k2,2n | python {params.rd}/repeatMask.py | groupBy -g 1,2,3,10 -c 9| awk 'BEGIN{{OFS="\t"}} $6=$5/$4' > {output.inter}
+    intersectBed -wa -wb -a <( awk '$4>2' {input.call} |cut -f 1-3) -b {params.rep} |sort -k1,1 -k2,2n | python {params.sd}/hmcnc/HMM/repeatMask.py | groupBy -g 1,2,3,10 -c 9| awk 'BEGIN{{OFS="\t"}} $6=$5/$4' > {output.inter}
 
 intersectBed -v -a <( awk '$4>2' {input.call} |cut -f 1-3) -b {params.rep} |awk 'BEGIN{{OFS="\t"}}{{print$1,$2,$3,$3-$2,0,0}}'>>{output.inter}
 
-intersectBed -wa -wb -a <(awk '$6<0.8' {output.inter} ) -b <( awk '$4>2' {input.call} ) |awk 'BEGIN{{OFS="\t"}} {{print $1,$2,$3,$10,$6;}}'|awk '$3-$2>{params.mnl}' > {output.maskedcall}
+intersectBed -wa -wb -a <(awk '$6<0.8' {output.inter} ) -b <( awk '$4>2' {input.call} ) |awk 'BEGIN{{OFS="\t"}} {{print $1,$2,$3,$10,$6;}}'|awk '$3-$2>15000' > {output.maskedcall}
 """
 
 
 
 rule Postcn3:
     input:
-        s="hmm/pre.collapsed_duplications.split.bed"
+        s="hmm_ref/pre.collapsed_duplications.split.bed"
     output:
-        pre="hmm/pre_cn3.txt",
-        reg="hmm/cn3_region.txt",
-        nf="hmm/cn3.nucfreq.bed.gz"
+        pre="hmm_ref/pre_cn3.txt",
+        reg="hmm_ref/cn3_region.txt",
+        nf="hmm_ref/cn3.nucfreq.bed.gz"
     params:
         grid_opts=config["grid_blat"],
         sd=SD,
-        bam=config['bam'],
-        asm=assembly,
+        bam="ref_aligned.bam",
+        asm=asmm,
         temp=config['temp']
     resources:
         load=1
@@ -386,16 +359,13 @@ tabix -C {output.nf}
 
 rule lrt:
     input:
-        nf="hmm/cn3.nucfreq.bed.gz",
-        reg="hmm/cn3_region.txt",
-     #   done="getPos.done",
-       # ps=lambda wildcards: pos[wildcards.p],
+        nf="hmm_ref/cn3.nucfreq.bed.gz",
+        reg="hmm_ref/cn3_region.txt",
     output:
-        post="hmm/cn3/post_cn3.bed",
+        post="hmm_ref/cn3/post_cn3.bed",
     params:
         grid_opts=config["grid_small"],
         sd=SD,
-        #ps="{p}",
     resources:
         load=1
     shell:"""
@@ -412,9 +382,8 @@ rule lrt:
 
 rule filterCN3:
     input:
-        post="hmm/cn3/post_cn3.bed",
-        #expand("cn3/post_cn3.{p}.bed",p=lambda wildcards: getPos("cn3_region.txt")),
-        s="hmm/pre.collapsed_duplications.split.bed"
+        post="hmm_ref/cn3/post_cn3.bed",
+        s="hmm_ref/pre.collapsed_duplications.split.bed"
     output:
         ss="collapsed_duplications.split.bed"
     resources:
@@ -429,10 +398,10 @@ intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss}
 
 rule callSummary:
     input:
-        call="{outdir}/hmm_ref/DUPcalls.masked_CN.tsv",
+        call="hmm_ref/DUPcalls.masked_CN.tsv",
     output:
-        sumcall="{outdir}/hmm_ref/CallSummary.{ep}.tsv",
-        Vsumcall="{outdir}/hmm_ref/CallSummary.verbose.{ep}.tsv",
+        sumcall="hmm_ref/CallSummary.{ep}.tsv",
+        Vsumcall="hmm_ref/CallSummary.verbose.{ep}.tsv",
     shell:"""
 sort -k4,4n {input.call}|awk 'BEGIN{{OFS="\t"}} $6=$3-$2' -|groupBy -g 4 -c 4,6 -o count,mean>{output.sumcall}
 sort -k1,1 -k4,4n {input.call}|awk 'BEGIN{{OFS="\t"}} $6=$3-$2' -|groupBy -g 1,4 -c 4,6 -o count,mean> {output.Vsumcall}
@@ -441,9 +410,9 @@ sort -k1,1 -k4,4n {input.call}|awk 'BEGIN{{OFS="\t"}} $6=$3-$2' -|groupBy -g 1,4
 
 rule GeneCount:
     input:
-        call="{outdir}/hmm_ref/DUPcalls.masked_CN.composite.tsv",
+        call="hmm_ref/DUPcalls.masked_CN.composite.tsv",
     output:
-        geneCount="{outdir}/hmm_ref/DUP.gene_count.bed",
+        geneCount="hmm_ref/DUP.gene_count.bed",
     params:
         gen=GEN,
     shell:"""
