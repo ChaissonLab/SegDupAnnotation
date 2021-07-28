@@ -117,7 +117,7 @@ rule all:
 #        combinedCov="RNAseq/combined.bed",
 #        IsoSeq=expand("IsoSeq/{dataset}.bam", dataset=list(config["IsoSeq"].keys())),
         counted="sedef_out/counted.tab",
-        tandem_dups="sedef_out/tandem_dups.bed",
+   #     tandem_dups="sedef_out/tandem_dups.bed",
         low_cov_tandem_dups=expand("sedef_out/{sub}/tandem_dups.low_cov.bed",sub=subs),
         asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
@@ -1712,9 +1712,9 @@ rule MapNamed:
     params:
         grid_opts=config["grid_large"]
     resources:
-        load=12
+        load=16
     shell:"""
-minimap2 {input.asm} {input.fa} -t 12 > {output.mapped}
+minimap2 {input.asm} {input.fa} -t 16 > {output.mapped}
 """
 
 rule SelectDups:
