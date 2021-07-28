@@ -57,7 +57,7 @@ rule all:
         vitterout=expand("hmm_ref/{ctg}.viterout.txt", ctg=contigs),
         cn=expand("hmm_ref/copy_number.{ctg}.bed", ctg=contigs),
         allCN="hmm_ref/copy_number.tsv",
-        dups="hmm_ref/collapsed_duplications.bed",
+        dups="hmm_ref/collapsed_duplications.split.bed",
         don="hmm.done"
 # Simple preprocessing, make sure there is an index on the assembly.
 #
