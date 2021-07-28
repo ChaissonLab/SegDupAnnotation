@@ -43,7 +43,7 @@ if config['temp2']!="":
 
 bamFiles={f.split("/")[-1]: f for f in config["reads_bam"] }
 
-localrules: all, GetMeanCoverage, orderVitter, combineVitter, PlotBins
+localrules: all, GetMeanCoverage, orderVitter, combineVitter, PlotBins, RemoveBams
 
 
 rule all:
