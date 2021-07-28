@@ -16,9 +16,9 @@ assm="/project/mchaisso_100/shared/references/hg38_noalts/hg38.no_alts.fasta"
 
 
 
-ASM=SD+"hmcnc/HMM/annotation/hg38.fa.fai"
-REP=SD+"hmcnc/HMM/annotation/repeatMask.merged.bed"
-GEN=SD+"hmcnc/HMM/annotation/gencode.gene.bed"
+ASM=SD+/"hmcnc/HMM/annotation/hg38.fa.fai"
+REP=SD+"/hmcnc/HMM/annotation/repeatMask.merged.bed"
+GEN=SD+"/hmcnc/HMM/annotation/gencode.gene.bed"
 
 #config("hmm_caller.json")
 
@@ -129,7 +129,7 @@ rule MergeBams:
         aln=expand("ref_aligned/{b}.bam", b=bamFiles.keys())
     output:
         bam="ref_aligned.bam",
-     params:
+    params:
         grid_opts=config["grid_medium"]
     resources:
         load=2
@@ -340,7 +340,7 @@ rule Postcn3:
         grid_opts=config["grid_blat"],
         sd=SD,
         bam="ref_aligned.bam",
-        asm=asmm,
+        asm=assm,
         temp=config['temp']
     resources:
         load=1
