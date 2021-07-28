@@ -32,7 +32,7 @@ pos=[]
 
 subs=["all", "high_ident"]
 
-localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, MakeFaiLinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes, AnnotateHighIdentity, GetTotalMasked, AnnotateResolvedTandemDups, RemoveBams
+localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes, AnnotateHighIdentity, GetTotalMasked, AnnotateResolvedTandemDups, RemoveBams
 
 
 
@@ -117,7 +117,7 @@ rule all:
 #        combinedCov="RNAseq/combined.bed",
 #        IsoSeq=expand("IsoSeq/{dataset}.bam", dataset=list(config["IsoSeq"].keys())),
         counted="sedef_out/counted.tab",
-        tandem_dups="sedef_out/tandem_dups.bed",
+   #     tandem_dups="sedef_out/tandem_dups.bed",
         low_cov_tandem_dups=expand("sedef_out/{sub}/tandem_dups.low_cov.bed",sub=subs),
         asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
@@ -138,7 +138,7 @@ rule MakeFaiLinkOrig:
         orig=assembly,
         fai=assembly+".fai"
     params:
-        grid_opts=config["grid_small"],
+        grid_opts=config["grid_medium"],
         sd=SD
     resources:
         load=1
@@ -155,7 +155,7 @@ rule IndexGenome:
         gli=assembly+".gli"
     params:
         sd=SD,
-        grid_opts=config["grid_large"],
+        grid_opts=config["grid_medium"],
         index_params=config["index_params"]
     shell:"""
 lra index {input.ref} {params.index_params}
@@ -1712,9 +1712,9 @@ rule MapNamed:
     params:
         grid_opts=config["grid_large"]
     resources:
-        load=12
+        load=16
     shell:"""
-minimap2 {input.asm} {input.fa} -t 12 > {output.mapped}
+minimap2 {input.asm} {input.fa} -t 16 > {output.mapped}
 """
 
 rule SelectDups:
@@ -1912,12 +1912,6 @@ cat {input.depth_filt} | awk '{{ $5=1; print;}}' | tr " " "\\t" | bedtools group
 
 cat {input.depth_filt} | awk '{{ if ($5 == 0) {{ $5=1;}} print;}}' | tr " " "\\t" | bedtools groupby -g 4 -c 5 -o sum | awk '{{ if ($2 > 1) {{ print;}} }}' > {output.gene_count}
 """
-
-
-
-
-
-
 
 
 rule RemoveBams:
