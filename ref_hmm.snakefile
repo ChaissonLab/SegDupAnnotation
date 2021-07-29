@@ -49,7 +49,6 @@ localrules: all, GetMeanCoverage, orderVitter, combineVitter, PlotBins, RemoveBa
 rule all:
     input:
         fai=assm+".fai",
-        bam=config["bam"],
         bed="hmm_ref/cov.bed",
         no_subreadbed="hmm_ref/cov.no_subread.bed",
         bins="hmm_ref/coverage.bins.bed.gz",
