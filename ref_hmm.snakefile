@@ -428,15 +428,14 @@ rule GeneCount:
 
 
 
-rule RemoveBams:
+rule Done:
     input:
         bam="ref_aligned.bam",
         s="hmm_ref/collapsed_duplications.split.bed",
         aln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),
     output:
-        don="hmm.done"
+        don="Rhmm.done"
     shell:"""
 touch {output}
- rm {input.aln}
     """
 

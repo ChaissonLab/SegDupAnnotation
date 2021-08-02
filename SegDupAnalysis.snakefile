@@ -124,6 +124,7 @@ rule all:
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
        # sdDistPdf=config["species"]+".sd_dist.pdf",
       #  post=dynamic("cn3/post_cn3.{p}.bed"),#,p=pos), #lambda wildcards: getPos("cn3_region.txt")),
+        d="done.done",
 
 
 #
@@ -436,6 +437,22 @@ rule RunDepthHmm:
 snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete 
 """
 
+rule RunRefDepthHmm:
+    input:
+        vo="hmm/copy_number.tsv",
+    output:
+        vo="hmm_ref/copy_number.tsv",
+        cb="hmm_ref/coverage.bins.bed.gz",
+        mc="hmm_ref/mean_cov.txt"
+    params:
+        grid_opts=config["grid_large"],
+        sd=SD,
+    resources:
+        load=16
+    shell:"""
+snakemake --nolock -p -s {params.sd}/ref_hmm.snakefile -j 16 --rerun-incomplete 
+"""
+
 rule ConvertHMMCopyNumberToCollapsedDuplications:
     input:
         bed="hmm/copy_number.tsv"
@@ -492,24 +509,7 @@ tabix -C {output.nf}
 
 """
 
-#rule getPos:
- #   input:
- #       reg="cn3_region.txt",
- #   output:
- #       done="getPos.done"
- #   run:
- #       import sys
-        #pos=[]
- #       with open(input.reg) as c, open("getPos.done",'w') as g:
- #           for line in c.readlines():
- #               line=line.rstrip()
- #               pos.append(line)
- #           print(pos[0])
- #           g.write("done")
- #       print("getPos")
 
-        #print(pos[0]+"poss")
-        #return pos
 
 rule lrt:
     input:
@@ -1913,15 +1913,48 @@ cat {input.depth_filt} | awk '{{ $5=1; print;}}' | tr " " "\\t" | bedtools group
 cat {input.depth_filt} | awk '{{ if ($5 == 0) {{ $5=1;}} print;}}' | tr " " "\\t" | bedtools groupby -g 4 -c 5 -o sum | awk '{{ if ($2 > 1) {{ print;}} }}' > {output.gene_count}
 """
 
+rule cramBam:
+    input:
+        bam=config['bam'],
+    output:
+        cram="assembly.cram",
+    params:
+        grid_opts=config["grid_medium"],
+    shell:"""
+    ./crambams.sh
+
+"""
+
+rule RcramBam:
+    input:
+        rbam="ref_aligned.bam",
+    output:
+        rcram="ref_aligned.cram",
+    params:
+        grid_opts=config["grid_medium"],
+    shell:"""
+    ./Rcrambams.sh
+
+"""
+
+
 
 rule RemoveBams:
     input:
+        rbam="ref_aligned.bam",
+        rs="hmm_ref/collapsed_duplications.split.bed",
+        don="Rhmm.done",
         bam=config['bam'],
         low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
         s="collapsed_duplications.split.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
+        Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
         asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
+    output:
+        d="done.done",
     shell:"""
-touch file.done
- rm {input.aln}
+rm {input.aln}
+rm {input.Raln}
+touch {output}
+ 
     """
