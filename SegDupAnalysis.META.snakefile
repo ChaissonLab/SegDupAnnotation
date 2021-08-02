@@ -17,6 +17,24 @@ if config['temp2']!="":
     tempp=config['temp2']
 
 
+
+#override for meta running on batch genomes
+config["species"] = config["o_species"] + "_CCS"
+config["temp"] = config["t"]
+config["temp2"] = config["t2"]
+
+fn="/project/mchaisso_100/projects/HPRC/" + config["o_species"] + "/" + config["o_species"] + ".forn"
+
+_reads=[]
+with open(fn,'r') as reads:
+    for line in reads.readlines():
+        line=line.rstrip()
+        _reads.append(line)
+
+config["reads_bam"] = _reads
+
+
+
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
 
