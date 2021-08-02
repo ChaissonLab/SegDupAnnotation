@@ -1916,24 +1916,26 @@ cat {input.depth_filt} | awk '{{ if ($5 == 0) {{ $5=1;}} print;}}' | tr " " "\\t
 rule cramBam:
     input:
         bam=config['bam'],
+        orig="assembly.orig.fasta"
     output:
         cram="assembly.cram",
     params:
         grid_opts=config["grid_medium"],
     shell:"""
-    ./crambams.sh
 
+samtools view {input.bam} -C -@ 4 -T {input.orig} -o {output.cram}
 """
 
 rule RcramBam:
     input:
         rbam="ref_aligned.bam",
+        ref="assembly.hg38.fa"
     output:
         rcram="ref_aligned.cram",
     params:
         grid_opts=config["grid_medium"],
     shell:"""
-    ./Rcrambams.sh
+samtools view {input.rbam} -C -@ 4 -T {input.ref} -o {output.rcram}
 
 """
 
