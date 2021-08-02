@@ -118,7 +118,7 @@ rule AlignBam:
 #{params.sd}/Cat.sh {input.bam} | ./home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
  #  samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
 
-{params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a  | \
+{params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a --sam-hit-only | \
    samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned} 
 
 """
@@ -428,15 +428,14 @@ rule GeneCount:
 
 
 
-rule RemoveBams:
+rule Done:
     input:
         bam="ref_aligned.bam",
         s="hmm_ref/collapsed_duplications.split.bed",
         aln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),
     output:
-        don="hmm.done"
+        don="Rhmm.done"
     shell:"""
 touch {output}
- rm {input.aln}
     """
 

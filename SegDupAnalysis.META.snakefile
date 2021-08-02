@@ -5,7 +5,7 @@ import os.path
 
 
 # Config
-configfile: "sd_analysis.json"
+configfile: "/project/mchaisso_100/projects/HPRC/sd_analysis.json"
 
 
 
