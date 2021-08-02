@@ -22,6 +22,7 @@ if config['temp2']!="":
 config["species"] = config["o_species"] + "_CCS"
 config["temp"] = config["t"]
 config["temp2"] = config["t2"]
+config['asm'] = config["o_species"] + "." + config['hap'] + ".f1_assembly_v2.fa"
 
 fn="/project/mchaisso_100/projects/HPRC/" + config["o_species"] + "/" + config["o_species"] + ".forn"
 
