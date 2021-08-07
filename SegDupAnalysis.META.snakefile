@@ -143,6 +143,7 @@ rule all:
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
        # sdDistPdf=config["species"]+".sd_dist.pdf",
       #  post=dynamic("cn3/post_cn3.{p}.bed"),#,p=pos), #lambda wildcards: getPos("cn3_region.txt")),
+        rbam="ref_aligned.bam",
         d="done.done",
 
 
@@ -175,7 +176,7 @@ rule IndexGenome:
         gli=assembly+".gli"
     params:
         sd=SD,
-        grid_opts=config["grid_medium"],
+        grid_opts="sbatch -c 1 --mem=32G --time=4:00:00 --partition=qcb",
         index_params=config["index_params"]
     shell:"""
 lra index {input.ref} {params.index_params}
@@ -462,7 +463,9 @@ rule RunRefDepthHmm:
     output:
         vo="hmm_ref/copy_number.tsv",
         cb="hmm_ref/coverage.bins.bed.gz",
-        mc="hmm_ref/mean_cov.txt"
+        mc="hmm_ref/mean_cov.txt",
+        rbam="ref_aligned.bam",
+        done="Rhmm.done"
     params:
         grid_opts=config["grid_large"],
         sd=SD,
@@ -1963,19 +1966,16 @@ samtools view {input.rbam} -C -@ 4 -T {input.ref} -o {output.rcram}
 rule RemoveBams:
     input:
         rbam="ref_aligned.bam",
-        rs="hmm_ref/collapsed_duplications.split.bed",
         don="Rhmm.done",
         bam=config['bam'],
-        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
         s="collapsed_duplications.split.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
-        Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
         asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
     output:
         d="done.done",
     shell:"""
 rm {input.aln}
-rm {input.Raln}
+rm ref_aligned/*bam
 touch {output}
  
     """
