@@ -156,7 +156,7 @@ rule IndexGenome:
         gli=assembly+".gli"
     params:
         sd=SD,
-        grid_opts=config["grid_medium"],
+        grid_opts="sbatch -c 1 --mem=32G --time=4:00:00 --partition=qcb",
         index_params=config["index_params"]
     shell:"""
 lra index {input.ref} {params.index_params}
