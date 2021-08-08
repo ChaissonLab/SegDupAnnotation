@@ -41,7 +41,6 @@ if config['temp2']!="":
 
 
 
-bamFiles={f.split("/")[-1]: f for f in config["reads_bam"] }
 
 localrules: all, GetMeanCoverage, orderVitter, combineVitter, PlotBins, RemoveBams
 
@@ -62,92 +61,6 @@ rule all:
 #
 
 
-rule MakeFaiLinkOrig:
-    input:
-        asm=assm,
-    output:
-        orig="assembly.hg38.fa",
-        fai=assm+".fai"
-    params:
-        grid_opts=config["grid_small"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-ln -s {input.asm} ./{output.orig}
-ln -s {params.sd}/hmcnc/HMM/annotation/hg38.fa.fai {output.orig}
-"""
-
-
-rule IndexGenome:
-    input:
-        ref=assm,
-    output:
-        gli=assm+".gli"
-    params:
-        sd=SD,
-        grid_opts=config["grid_large"],
-        index_params=config["index_params"]
-    shell:"""
-lra index {input.ref} {params.index_params}
-"""
-
-def GetBam(f):
-    return f.split("/")[-1]
-
-#
-# Map individual bams separately
-#
-    
-rule AlignBam:
-    input:
-        bam=lambda wildcards: bamFiles[wildcards.base],
-        gli=assm+".gli"
-    output:
-        aligned="ref_aligned/{base}.bam"
-    params:
-        sd=SD,
-        ref=assm,
-        grid_opts=config["grid_large"],
-        temp=config["temp"],
-        mapping_params=config["mapping_params"]
-    resources:
-        load=16
-    shell:"""
-
-#{params.sd}/Cat.sh {input.bam} | ./home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
- #  samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
-
-{params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a --sam-hit-only | \
-   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned} 
-
-"""
-
-rule MergeBams:
-    input:
-        aln=expand("ref_aligned/{b}.bam", b=bamFiles.keys())
-    output:
-        bam="ref_aligned.bam",
-    params:
-        grid_opts=config["grid_medium"]
-    resources:
-        load=2
-    shell:"""
-samtools merge {output.bam} {input.aln} -@2
-"""
-
-rule IndexBam:
-    input:
-        bam="ref_aligned.bam"
-    output:
-        bai="ref_aligned.bam.bai"
-    resources:
-        load=2
-    params:
-        grid_opts=config["grid_medium"]
-    shell:"""
-samtools index -@2 {input.bam}
-"""
 
 
 rule MakeCovBed:
@@ -432,7 +345,6 @@ rule Done:
     input:
         bam="ref_aligned.bam",
         s="hmm_ref/collapsed_duplications.split.bed",
-        aln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),
     output:
         don="Rhmm.done"
     shell:"""
