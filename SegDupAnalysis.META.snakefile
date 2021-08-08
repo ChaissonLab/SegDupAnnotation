@@ -508,12 +508,11 @@ snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-inc
 
 rule RunRefDepthHmm:
     input:
-        vo="hmm/copy_number.tsv",
+        v="ref_aligned.bam",
     output:
         vo="hmm_ref/copy_number.tsv",
         cb="hmm_ref/coverage.bins.bed.gz",
         mc="hmm_ref/mean_cov.txt",
-        rbam="ref_aligned.bam",
         done="Rhmm.done"
     params:
         grid_opts=config["grid_large"],
