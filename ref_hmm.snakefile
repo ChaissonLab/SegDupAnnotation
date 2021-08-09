@@ -52,7 +52,7 @@ rule all:
         cn=expand("hmm_ref/copy_number.{ctg}.bed", ctg=contigs),
         allCN="hmm_ref/copy_number.tsv",
         dups="hmm_ref/collapsed_duplications.split.bed",
-        don="hmm.done"
+        don="Rhmm.done"
 # Simple preprocessing, make sure there is an index on the assembly.
 #
 
