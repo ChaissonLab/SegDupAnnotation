@@ -9,7 +9,7 @@ SD = os.path.dirname(workflow.snakefile)
 
 
 # Config
-configfile: "sd_analysis.json"
+configfile: "/project/mchaisso_100/projects/HPRC/sd_analysis.json"
 
 assembly="assembly.orig.fasta"
 

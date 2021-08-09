@@ -5,7 +5,7 @@ import os.path
 
 
 # Config
-configfile: "sd_analysis.json"
+configfile: "/project/mchaisso_100/projects/HPRC/sd_analysis.json"
 
 
 # Snakemake and working directories
@@ -20,7 +20,6 @@ ASM=SD+"/hmcnc/HMM/annotation/hg38.fa.fai"
 REP=SD+"/hmcnc/HMM/annotation/repeatMask.merged.bed"
 GEN=SD+"/hmcnc/HMM/annotation/gencode.gene.bed"
 
-#config("hmm_caller.json")
 
 fai= open(ASM)
 
@@ -40,9 +39,6 @@ if config['temp2']!="":
     tempp=config['temp2']
 
 
-
-
-localrules: all, GetMeanCoverage, orderVitter, combineVitter, PlotBins, RemoveBams
 
 
 rule all:
@@ -70,7 +66,6 @@ rule MakeCovBed:
         bed="hmm_ref/cov.bed",
     params:
         sd=SD,
-        grid_opts=config["grid_medium"]
     shell:"""
 samtools view -q 10 -F 2304 -@ 3 {input.bam} | {params.sd}/hmcnc/HMM/samToBed /dev/stdin/ --useH --flag   > {output.bed}
 """
@@ -83,7 +78,6 @@ if config['index_params']==" -CLR":
             covbed="hmm_ref/cov.no_subread.bed",
         params:
             sd=SD,
-            grid_opts=config["grid_medium"]
         shell:"""
     {params.sd}/RemoveRedundantSubreads.py --input {input.bed} |sort -k1,1 -k2,2n > {output.covbed}
     """
@@ -95,7 +89,6 @@ else:
             covbed="hmm_ref/cov.no_subread.bed",
         params:
             sd=SD,
-            grid_opts=config["grid_small"]
         shell:"""
 cd hmm_ref; ln -s cov.bed cov.no_subread.bed
     """
@@ -111,7 +104,6 @@ rule MakeIntersect:
     params:
         asm=assm,
         sd=SD,
-        grid_opts=config["grid_medium"]
     shell:"""
 intersectBed -sorted -c -a {input.windows} -b {input.bed}| bgzip -c > {output.bins}
 tabix -C {output.bins}
@@ -138,7 +130,6 @@ rule RunVitter:
         contig_prefix="{contig}",
         scaler=config['scaler'],
         epsi=config['epsi'],
-        grid_opts=config["grid_medium"]
     shell:"""
 mean=$(cat {input.avg})
 touch {output.cov}
@@ -200,8 +191,6 @@ rule ConvertHMMCopyNumberToCollapsedDuplications:
         bed="hmm_ref/copy_number.tsv"
     output:
         dups="hmm_ref/collapsed_duplications.bed"
-    params:
-        grid_opts=config["grid_small"]
     resources:
         load=1
     shell:"""
@@ -215,7 +204,6 @@ rule MakeCoverageBins:
         cbcol="hmm_ref/collapsed_duplications.bed.collapse",
         s="hmm_ref/pre.collapsed_duplications.split.bed"
     params:
-        grid_opts=config["grid_small"],
         sd=SD
     resources:
         load=1
@@ -235,7 +223,6 @@ rule repeatMask:
     params:
         rep=REP,
         sd=SD,
-        grid_opts=config["grid_small"],
     shell:"""
 
     intersectBed -wa -wb -a <( awk '$4>2' {input.call} |cut -f 1-3) -b {params.rep} |sort -k1,1 -k2,2n | python {params.sd}/hmcnc/HMM/repeatMask.py | groupBy -g 1,2,3,10 -c 9| awk 'BEGIN{{OFS="\t"}} $6=$5/$4' > {output.inter}
@@ -255,7 +242,6 @@ rule Postcn3:
         reg="hmm_ref/cn3_region.txt",
         nf="hmm_ref/cn3.nucfreq.bed.gz"
     params:
-        grid_opts=config["grid_blat"],
         sd=SD,
         bam="ref_aligned.bam",
         asm=assm,
@@ -282,7 +268,6 @@ rule lrt:
     output:
         post="hmm_ref/cn3/post_cn3.bed",
     params:
-        grid_opts=config["grid_small"],
         sd=SD,
     resources:
         load=1
@@ -306,8 +291,6 @@ rule filterCN3:
         ss="hmm_ref/collapsed_duplications.split.bed"
     resources:
         load=1
-    params:
-        grid_opts=config["grid_small"],
     shell:"""
 intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss} 
     """
@@ -320,7 +303,6 @@ rule callSummary:
     output:
         sumcall="hmm_ref/CallSummary.tsv",
         Vsumcall="hmm_ref/CallSummary.verbose.tsv",
-        grid_opts=config["grid_small"],
     shell:"""
 sort -k4,4n {input.call}|awk 'BEGIN{{OFS="\t"}} $6=$3-$2' -|groupBy -g 4 -c 4,6 -o count,mean>{output.sumcall}
 sort -k1,1 -k4,4n {input.call}|awk 'BEGIN{{OFS="\t"}} $6=$3-$2' -|groupBy -g 1,4 -c 4,6 -o count,mean> {output.Vsumcall}
@@ -334,7 +316,6 @@ rule GeneCount:
         geneCount="hmm_ref/DUP.gene_count.bed",
     params:
         gen=GEN,
-        grid_opts=config["grid_small"],
     shell:"""
         intersectBed -F 1 -wb -wa -a {input} -b {params.gen} | groupBy -g 1,2,3,6 -c 5,10,10 -o collapse,collapse,count > {output}
         """
