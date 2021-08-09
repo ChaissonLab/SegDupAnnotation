@@ -1945,7 +1945,7 @@ rule RemoveBams:
     input:
         rbam="ref_aligned.bam",
         don="Rhmm.done",
-        done="hmm.done"
+        done="hmm.done",
         bam=config['bam'],
         s="collapsed_duplications.split.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
