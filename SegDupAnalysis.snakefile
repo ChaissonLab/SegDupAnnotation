@@ -1944,10 +1944,9 @@ samtools view {input.rbam} -C -@ 4 -T {input.ref} -o {output.rcram}
 rule RemoveBams:
     input:
         rbam="ref_aligned.bam",
-        rs="hmm_ref/collapsed_duplications.split.bed",
         don="Rhmm.done",
+        done="hmm.done"
         bam=config['bam'],
-        low_cov_tandem_dups="sedef_out/tandem_dups.low_cov.bed",       
         s="collapsed_duplications.split.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
         Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        

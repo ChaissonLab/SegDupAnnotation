@@ -29,6 +29,7 @@ rule all:
         cn=expand("hmm/copy_number.{ctg}.bed", ctg=contigs),
         allCN="hmm/copy_number.tsv",
 #        plot=expand("hmm/{bm}.noclip.pdf",bm=prefix_bam),
+        don="hmm.done"
 
 rule MakeCovBed:
     input:
@@ -150,4 +151,17 @@ rule PlotBins:
 #plot every 50000 points ~ 5MB
 Rscript {params.sd}/hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm/{params.genome_prefix} 50000 {input.avg}
 #touch {output.plot}
+"""
+
+
+rule Done:
+    input:
+        allCN="hmm/copy_number.tsv",
+        vitterout=expand("hmm/{ctg}.viterout.txt", ctg=contigs),
+    output:
+        don="hmm.done"
+    shell:"""
+rm {input.vitterout}
+touch {output}
+
 """
