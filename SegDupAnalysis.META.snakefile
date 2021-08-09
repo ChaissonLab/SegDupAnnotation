@@ -2015,15 +2015,17 @@ rule RemoveBams:
     input:
         rbam="ref_aligned.bam",
         don="Rhmm.done",
+        done="hmm.done",
         bam=config['bam'],
         s="collapsed_duplications.split.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
+        Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
         asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
     output:
         d="done.done",
     shell:"""
 rm {input.aln}
-rm ref_aligned/*bam
+rm {input.Raln}
 touch {output}
  
     """
