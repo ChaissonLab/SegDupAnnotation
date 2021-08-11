@@ -326,9 +326,11 @@ rule Done:
     input:
         bam="ref_aligned.bam",
         s="hmm_ref/collapsed_duplications.split.bed",
+        vitterout=expand("hmm_ref/{ctg}.viterout.txt", ctg=contigs),
     output:
         don="Rhmm.done"
     shell:"""
+rm {input.vitterout}
 touch {output}
     """
 
