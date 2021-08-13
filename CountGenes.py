@@ -7,10 +7,10 @@ for line in sys.stdin:
 
     if gene not in genes:
         genes[gene] = [0,0]
-    if vals[5] == "multi":
+    if vals[7] == "multi":
         genes[gene][0]+=1
     else:
-        genes[gene][1]+=int(vals[4])
+        genes[gene][1]+=int(vals[5])
 for gene in genes:
     print(gene + "\t" + str(genes[gene][0]) + "\t" + str(genes[gene][1]))
     

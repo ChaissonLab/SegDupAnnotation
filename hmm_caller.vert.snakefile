@@ -27,7 +27,7 @@ rule all:
         avg="hmm/mean_cov.txt",
         vitterout=expand("hmm/{ctg}.viterout.txt", ctg=contigs),
         cn=expand("hmm/copy_number.{ctg}.bed", ctg=contigs),
-        allCN="hmm/copy_number.tsv",
+        allCN="hmm/copy_number.bed.gz",
 #        plot=expand("hmm/{bm}.noclip.pdf",bm=prefix_bam),
 
 rule MakeCovBed:
@@ -63,7 +63,7 @@ else:
             sd=SD,
         shell:"""
 cd hmm; ln -s cov.bed cov.no_subread.bed
-    """
+"""
 rule MakeIntersect:
     input:
         bed="hmm/cov.no_subread.bed",
@@ -82,13 +82,22 @@ rule GetMeanCoverage:
         bins="hmm/coverage.bins.bed.gz",
     output:
         avg="hmm/mean_cov.txt",
+        var="hmm/var_cov.txt"
+    params:
+        sd=SD
     shell:"""
-zcat {input.bins} | awk 'BEGIN{{OFS="\\t";c=0;sum=0;}} sum=sum+$4;c=c+1;END{{print sum/c;}}' | tail -1> {output.avg}
+zcat {input.bins} | cut -f 4 | {params.sd}/stats > cov_stats.txt
+cut -f 1 cov_stats.txt > {output.avg}
+mean=`cat {output.avg}`
+zcat {input.bins} | cut -f 4 | awk -v avg=$mean '{{ if ($1 > 0.25*avg && $1 < 1.75*avg) {{ print;}} }}' | {params.sd}/stats > cov_stats.txt
+cut -f 1 cov_stats.txt > {output.avg}
+cut -f 4 cov_stats.txt > {output.var}
 """
 
 rule RunVitter:
     input:
         avg="hmm/mean_cov.txt",
+        var="hmm/var_cov.txt",        
         bins="hmm/coverage.bins.bed.gz",
     output:
         cov="hmm/{contig}.viterout.txt",
@@ -99,9 +108,10 @@ rule RunVitter:
         epsi=config['epsi']
     shell:"""
 mean=$(cat {input.avg})
+var=$(cat {input.var})
 touch {output.cov}
 tabix {input.bins} {wildcards.contig} | cut -f 4 | \
-{params.sd}/hmcnc/HMM/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} {params.scaler} {params.epsi} 0
+{params.sd}/hmcnc/HMM/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} 10 -500 0 --nbvar $var
 
 """
 
@@ -121,7 +131,7 @@ rule combineVitter:
     input:
         allCopyNumberBED=expand("hmm/copy_number.{contig}.bed", contig=contigs),
     output:
-        allCN="hmm/copy_number.tsv",
+        allCN="hmm/copy_number.bed",
     run:
         import sys
         sys.stderr.write("Writing " + str(output.allCN) + "\n")
@@ -133,6 +143,16 @@ rule combineVitter:
             cn.write("".join(l))
         cn.close()
 
+
+rule IndexCN:
+    input:
+        allCN="hmm/copy_number.bed"
+    output:
+        gz="hmm/copy_number.bed.gz"
+    shell:"""
+bgzip -c {input.allCN} > {output.gz}
+tabix {output.gz}
+"""
 
 
 rule PlotBins:
