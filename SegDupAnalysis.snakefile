@@ -560,13 +560,8 @@ rule Postcn3:
         s="pre.collapsed_duplications.split.bed"
     output:
         pre="pre_cn3.txt",
-<<<<<<< Updated upstream
         reg="cn3_region.txt",
         nf="cn3.nucfreq.bed.gz"
-=======
-        post="post_cn3.bed",
-        nf="cn3.nucfreq"
->>>>>>> Stashed changes
     params:
         grid_opts=config["grid_blat"],
         sd=SD,
@@ -576,7 +571,6 @@ rule Postcn3:
     resources:
         load=1
     shell:"""
-<<<<<<< Updated upstream
 awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} | sort -k1,1 -k2,2n > {output.pre}
 
 awk '{{print $1":"$2"-"$3}}' {output.pre} > {output.reg}
@@ -587,11 +581,7 @@ tabix -C {output.nf}
 
 
 """
-=======
-awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} |awk '{{print $1":"$2"-"$3}}'> {output.pre}
 
-    {params.sd}/bamToFreq {params.bam} {output.pre} {params.asm} > {output.nf}
->>>>>>> Stashed changes
 
 
 
@@ -599,20 +589,17 @@ rule lrt:
     input:
         nf="cn3.nucfreq.bed.gz",
         reg="cn3_region.txt",
-     #   done="getPos.done",
-       # ps=lambda wildcards: pos[wildcards.p],
     output:
         post="cn3/post_cn3.bed",
   #      lrt="cn3/post_cn3.lrt.bed",        
     params:
         grid_opts=config["grid_small"],
         sd=SD,
-        #ps="{p}",
     resources:
         load=1
     shell:"""
     rm -f {output}
-    echo "filtering cn3"
+    echo "filtering cn3" >/dev/stderr
     for r in ` cat {input.reg} `;do
         echo $r > /dev/stderr
         tabix {input.nf} $r |  python {params.sd}/het_check.ini.py -r $r | tr ":-" "\\t" >> {output.post}
@@ -620,15 +607,7 @@ rule lrt:
 #        tabix {input.nf} $r |  python {params.sd}/het_check_lrt.py --region $r >> {output.lrt}
 """
 
-rule lrt:
 
-
-
-    shell:"""
-
-       cat {input.nf}|  python {params.sd}/het_check.py -r $r | tr ":-" "\t" >> {output.post}
-done
-"""
 
 
 
