@@ -33,7 +33,7 @@ pos=[]
 subs=["all", "high_ident"]
 
 
-localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, MakeFaiLinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes, AnnotateHighIdentity, GetTotalMasked, AnnotateResolvedTandemDups, GeneCountFact, GetFullGeneCountTable, FilterMultiExonBed, MappedSamIdentityDups, RemoveOriginal
+localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes, AnnotateHighIdentity, GetTotalMasked, AnnotateResolvedTandemDups, GeneCountFact, GetFullGeneCountTable, FilterMultiExonBed, MappedSamIdentityDups, RemoveOriginal, RemoveBams
 
 
 
@@ -95,6 +95,7 @@ rule all:
 #        cn3_lrt="cn3/post_cn3.lrt.bed",        
        # sdDistPdf=config["species"]+".sd_dist.pdf",
       #  post=dynamic("cn3/post_cn3.{p}.bed"),#,p=pos), #lambda wildcards: getPos("cn3_region.txt")),
+        rbam="ref_aligned.bam",
         d="done.done",
 
 
@@ -219,34 +220,78 @@ rule IndexBam:
 samtools index -@2 {input.bam}
 """
 
-##
-## The read depth analysis and duplication assembly all need mapped reads
-## 
-#rule MakeBam:
-#    input:
-#        reads=expand("{b}.aligned.bam", b=config["bam"])
-#    output:
-#        bam=config["bam"]
-#    params:
-#        sd=SD,
-#        ref=assembly,
-#        temp=config["temp"],
-#        grid_opts=config["grid_large"]
-#    shell:"""
-#if [ ! -e {params.ref}.gli ]; then
-#    {params.sd}/LRA/lra index {params.ref}
-#fi
-#for f in {input.reads}; do 
-#samtools view -h -F 2304 $f | samtools fastq - 
-#done | {params.sd}/LRA/lra align {params.ref} /dev/stdin -t 24 -p s | samtools sort -T {params.temp}/asm.$$ -@2 -m4G -o {output.bam}
-#samtools index -@2 {output.bam}
-#"""
+
+rule RefMakeFaiLinkOrig:
+    input:
+        asm=assm,
+    output:
+        orig="assembly.hg38.fa",
+        fai=assm+".fai"
+    params:
+        grid_opts=config["grid_small"],
+        sd=SD
+    resources:
+        load=1
+    shell:"""
+ln -s {input.asm} ./{output.orig}
+ln -s {params.sd}/hmcnc/HMM/annotation/hg38.fa.fai {output.fai}
+"""
+
+
+
+# Map individual bams separately
 #
-#
-# Some genomes are poorly masked or are not represented in repeat
-# masking libraries. Running windowmasker can identify some repeats
-# missed by library based analysis.
-#
+    
+rule RefAlignBam:
+    input:
+        bam=lambda wildcards: bamFiles[wildcards.base],
+        #gli=assm+".gli"
+    output:
+        aligned="ref_aligned/{base}.bam"
+    params:
+        sd=SD,
+        ref=assm,
+        grid_opts=config["grid_large"],
+        temp=config["temp"],
+        mapping_params=config["mapping_params"]
+    resources:
+        load=16
+    shell:"""
+
+#{params.sd}/Cat.sh {input.bam} | ./home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
+ #  samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
+
+{params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a --sam-hit-only | \
+   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned} 
+
+"""
+
+rule RefMergeBams:
+    input:
+        aln=expand("ref_aligned/{b}.bam", b=bamFiles.keys())
+    output:
+        bam="ref_aligned.bam",
+    params:
+        grid_opts=config["grid_medium"]
+    resources:
+        load=2
+    shell:"""
+samtools merge {output.bam} {input.aln} -@2
+"""
+
+rule RefIndexBam:
+    input:
+        bam="ref_aligned.bam"
+    output:
+        bai="ref_aligned.bam.bai"
+    resources:
+        load=2
+    params:
+        grid_opts=config["grid_medium"]
+    shell:"""
+samtools index -@2 {input.bam}
+"""
+
 
 rule MakeWMDB:
     input:
@@ -330,7 +375,7 @@ rule MaskFasta:
     output:
         mask="split/to_mask.{region}.fasta.masked"
     params:
-        grid_opts=config["grid_scavenge"],
+        grid_opts=config["grid_medium"],
         repeatLibrary=config["repeat_library"],
         tmpdir=tempp,
     resources:
@@ -438,11 +483,12 @@ snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-inc
 
 rule RunRefDepthHmm:
     input:
-        vo="hmm/copy_number.tsv",
+        v="ref_aligned.bam",
     output:
         vo="hmm_ref/copy_number.tsv",
         cb="hmm_ref/coverage.bins.bed.gz",
-        mc="hmm_ref/mean_cov.txt"
+        mc="hmm_ref/mean_cov.txt",
+        done="Rhmm.done"
     params:
         grid_opts=config["grid_large"],
         sd=SD,
@@ -470,7 +516,8 @@ rule MakeCoverageBins:
         cb="collapsed_duplications.bed"
     output:
         cbcol="collapsed_duplications.bed.collapse",
-        s="collapsed_duplications.split.bed"
+        s="collapsed_duplications.split.bed",
+        ps="pre.collapsed_duplications.split.bed",
     params:
         grid_opts=config["grid_small"],
         sd=SD
@@ -479,6 +526,7 @@ rule MakeCoverageBins:
     shell:"""
 bedtools merge -i {input.cb} -c 5 -o collapse > {output.cbcol}
 {params.sd}/SplitCoverageBins.py {output.cbcol} | bedtools merge -c 4,4 -o min,max > {output.s}
+cp {output.s} {output.ps}
 """
 
 rule GetCollapseByRange:
@@ -512,8 +560,13 @@ rule Postcn3:
         s="pre.collapsed_duplications.split.bed"
     output:
         pre="pre_cn3.txt",
+<<<<<<< Updated upstream
         reg="cn3_region.txt",
         nf="cn3.nucfreq.bed.gz"
+=======
+        post="post_cn3.bed",
+        nf="cn3.nucfreq"
+>>>>>>> Stashed changes
     params:
         grid_opts=config["grid_blat"],
         sd=SD,
@@ -523,6 +576,7 @@ rule Postcn3:
     resources:
         load=1
     shell:"""
+<<<<<<< Updated upstream
 awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} | sort -k1,1 -k2,2n > {output.pre}
 
 awk '{{print $1":"$2"-"$3}}' {output.pre} > {output.reg}
@@ -533,6 +587,11 @@ tabix -C {output.nf}
 
 
 """
+=======
+awk ' {{if ($4==$5 && $4==3) print ;}}' {input.s} |awk '{{print $1":"$2"-"$3}}'> {output.pre}
+
+    {params.sd}/bamToFreq {params.bam} {output.pre} {params.asm} > {output.nf}
+>>>>>>> Stashed changes
 
 
 
@@ -544,7 +603,7 @@ rule lrt:
        # ps=lambda wildcards: pos[wildcards.p],
     output:
         post="cn3/post_cn3.bed",
-        lrt="cn3/post_cn3.lrt.bed",        
+  #      lrt="cn3/post_cn3.lrt.bed",        
     params:
         grid_opts=config["grid_small"],
         sd=SD,
@@ -561,20 +620,32 @@ rule lrt:
 #        tabix {input.nf} $r |  python {params.sd}/het_check_lrt.py --region $r >> {output.lrt}
 """
 
-#rule filterCN3:
-#    input:
-#        post="cn3/post_cn3.bed",
-#        #expand("cn3/post_cn3.{p}.bed",p=lambda wildcards: getPos("cn3_region.txt")),
-#        s="pre.collapsed_duplications.split.bed"
-#    output:
-#        ss="collapsed_duplications.split.bed"
-#    resources:
-#        load=1
-#    params:
-#        grid_opts=config["grid_small"],
-#    shell:"""
-#intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss} 
-#    """
+rule lrt:
+
+
+
+    shell:"""
+
+       cat {input.nf}|  python {params.sd}/het_check.py -r $r | tr ":-" "\t" >> {output.post}
+done
+"""
+
+
+
+rule filterCN3:
+    input:
+        post="cn3/post_cn3.bed",
+        #expand("cn3/post_cn3.{p}.bed",p=lambda wildcards: getPos("cn3_region.txt")),
+        s="pre.collapsed_duplications.split.bed"
+    output:
+        ss="collapsed_duplications.split.bed"
+    resources:
+        load=1
+    params:
+        grid_opts=config["grid_small"],
+    shell:"""
+intersectBed -v -a {input.s} -b <( cat {input.post} |grep fail) > {output.ss} 
+    """
 
 
 
@@ -1861,6 +1932,7 @@ bedtools intersect -v -a {output.colm} -b {input.comb} | \
    awk '{{ $4-=2; if ($4 < 0) {{ $4 = 0; }} print; }}' > {output.colx}
 """
 
+   
 rule MinimapGeneModelBed:
     input:
         bam="{data}.mapped.bam"
