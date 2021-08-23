@@ -158,7 +158,7 @@ tabix {output.gz}
 
 rule PlotBins:
     input:
-        allCN="hmm/copy_number.tsv",
+        allCN="hmm/copy_number.bed.gz",
         #aln=config["aln"],
         avg="hmm/mean_cov.txt",
     output:
@@ -176,7 +176,7 @@ Rscript {params.sd}/hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm/{params.genome
 
 rule Done:
     input:
-        allCN="hmm/copy_number.tsv",
+        allCN="hmm/copy_number.bed.gz",
         vitterout=expand("hmm/{ctg}.viterout.txt", ctg=contigs),
     output:
         don="hmm.done"
