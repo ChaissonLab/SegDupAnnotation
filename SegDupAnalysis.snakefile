@@ -7,6 +7,7 @@ import os.path
 # Config
 configfile: "sd_analysis.json"
 
+assm="/project/mchaisso_100/shared/references/hg38_noalts/hg38.no_alts.fasta"
 
 
 tempp=config['temp']
@@ -33,7 +34,7 @@ pos=[]
 subs=["all", "high_ident"]
 
 
-localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes, AnnotateHighIdentity, GetTotalMasked, AnnotateResolvedTandemDups, GeneCountFact, GetFullGeneCountTable, FilterMultiExonBed, MappedSamIdentityDups, RemoveOriginal, RemoveBams
+localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDuplicatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes, AnnotateHighIdentity, GetTotalMasked, AnnotateResolvedTandemDups, GeneCountFact, GetFullGeneCountTable, FilterMultiExonBed, MappedSamIdentityDups, RemoveOriginal, RemoveBams, MakeSedefIntv, HighestIdentPairs, SelectHighIdent
 
 
 
@@ -122,7 +123,7 @@ rule HighestIdentPairs:
 cat {input.sedefIntv} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$21; print $4"\\t"$5"\\t"$6"\\t"$21;}}' | bedtools sort > {output.sedefPairs}
 """
 
-rule SelctHighIdent:
+rule SelectHighIdent:
     input:
         sedefIntv="sedef_out/all/final.sorted.bed.intv",
         sedefPairs="sedef_out/all/final.sorted.bed.ident.pairs"
@@ -471,7 +472,8 @@ rule RunDepthHmm:
     output:
         vo="hmm/copy_number.bed.gz",
         cb="hmm/coverage.bins.bed.gz",
-        mc="hmm/mean_cov.txt"
+        mc="hmm/mean_cov.txt",
+        don="hmm.done",
     params:
         grid_opts=config["grid_large"],
         sd=SD,
@@ -516,7 +518,7 @@ rule MakeCoverageBins:
         cb="collapsed_duplications.bed"
     output:
         cbcol="collapsed_duplications.bed.collapse",
-        s="collapsed_duplications.split.bed",
+        #s="collapsed_duplications.split.bed",
         ps="pre.collapsed_duplications.split.bed",
     params:
         grid_opts=config["grid_small"],
@@ -525,8 +527,8 @@ rule MakeCoverageBins:
         load=1
     shell:"""
 bedtools merge -i {input.cb} -c 5 -o collapse > {output.cbcol}
-{params.sd}/SplitCoverageBins.py {output.cbcol} | bedtools merge -c 4,4 -o min,max > {output.s}
-cp {output.s} {output.ps}
+{params.sd}/SplitCoverageBins.py {output.cbcol} | bedtools merge -c 4,4 -o min,max > {output.ps}
+
 """
 
 rule GetCollapseByRange:
@@ -604,7 +606,6 @@ rule lrt:
         echo $r > /dev/stderr
         tabix {input.nf} $r |  python {params.sd}/het_check.ini.py -r $r | tr ":-" "\\t" >> {output.post}
     done    
-#        tabix {input.nf} $r |  python {params.sd}/het_check_lrt.py --region $r >> {output.lrt}
 """
 
 
@@ -2099,7 +2100,7 @@ rule RemoveBams:
         s="collapsed_duplications.split.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
         Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
-        asm_gene_count="gencode.mapped.bam.bed12.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
+        asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
     output:
         d="done.done",
     shell:"""
