@@ -15,23 +15,46 @@ int GetBest(int na, int nc, int ng, int nt, int &first) {
 
 	return 0;
 }
-
-int GetSecondBest(int na, int nc, int ng, int nt, int &second) {
-	vector<int> vals({na, nc, ng, nt});
-	std::sort(vals.begin(), vals.end());
-	second = vals[2];
-  int highest =vals[3];
-	if (second < highest/3) {
-		return 4;
-	}
-	else if (second == na) { return 0; }
-	else if (second == nc) { return 1; }
-	else if (second == ng) { return 2; } 
-	else if (second == nt) { return 3; } 
-	return 4;
+vector<int> NucMap;
+int GetRefAndAlt(char refNuc, vector<int> &counts, int &ref, int &alt) {
+  vector<int> sCounts=counts;
+  sort(sCounts.begin(), sCounts.end());
+  
+  int second = sCounts[2];
+  int first  = sCounts[3];
+  int firstIndex=-1, secondIndex=-1;
+  for (int i=0; i < 4; i++) {
+    if (firstIndex == -1 and counts[i] == first) {
+      firstIndex=i;
+    }
+    else if (secondIndex == -1 and counts[i] == second) {
+      secondIndex=i;
+    }
+  }
+  if (firstIndex == -1 or secondIndex == -1) {
+    ref=0; alt=0;
+    return 4;
+  }
+  int refNucIndex=NucMap[refNuc];
+  if (first == 0 or second/first < 0.2) {
+    ref=0;
+    alt=0;
+    return 4;
+  }
+  if (firstIndex == refNucIndex) {
+    ref=first;
+    alt=second;
+    return secondIndex;
+  }
+  else {
+    ref=second;
+    alt=first;
+    return firstIndex;
+  }  
 }
 
 const char* nucs = "ACGTN";
+
 
 int main(int argc, const char* argv[]) {
 	if (argc < 3) {
@@ -41,6 +64,12 @@ int main(int argc, const char* argv[]) {
 				 << "    This file has one region per line, in the format chrom:start-end" << endl;
 		exit(1);
 	}
+	NucMap.resize(256,4);
+	NucMap[(int)'A']=0;
+	NucMap[(int)'C']=1;
+	NucMap[(int)'G']=2;
+	NucMap[(int)'T']=3;	
+	
 	string bamFileName=argv[1];
 	string regionFileName=argv[2];
 	string referenceName=argv[3];
@@ -102,14 +131,20 @@ int main(int argc, const char* argv[]) {
 			if (readLength < 100) {
 				continue;
 			}
-			if (b->core.qual < 2) {
+			if (b->core.qual < 10) {
 				continue;
 			}
+			if (b->core.flag & 0x800) {
+			  continue;
+			}
 			// Extract sequence
+
 			vector<char> seq(readLength);
 			uint8_t *q = bam_get_seq(b);
 			for (int i=0; i < readLength; i++) {seq[i]=seq_nt16_str[bam_seqi(q,i)];	}
 			uint32_t* cigar = bam_get_cigar(b);
+			int refLen = bam_cigar2rlen(b->core.n_cigar, cigar);
+			//			cout << bam_get_qname(b)  << "\t" << refLen << "\t" << (int) b->core.qual << "\t" << (int) b->core.flag << endl;			
 			int qPos=0;
 			int refPos = b->core.pos;
 			int ci;
@@ -169,14 +204,19 @@ int main(int argc, const char* argv[]) {
 				}
 			}
 		}
+		int chromSeqLen=0;
+		char *chromSeq=faidx_fetch_seq(fai, chrom.c_str(), start, end, &chromSeqLen);
+		vector<int> counts(4);
 		for (int i = 0; i < nA.size(); i++) {
 			int  len;
-			char *nuc = faidx_fetch_seq(fai, chrom.c_str(), start+i,start+i, &len);
+			//			char *nuc = faidx_fetch_seq(fai, chrom.c_str(), start+i,start+i, &len);
 			int svn, sv;
-			svn= GetSecondBest(nA[i], nC[i], nG[i], nT[i], sv);
-
-			cout << chrom << "\t" << start+i << "\t" << nA[i] << "\t" << nC[i] << "\t" << nG[i] << "\t" << nT[i] << "\t" << nDel[i] << "\t0\t" << (char) toupper(nuc[0]) << "\t" << nucs[svn] << "\t" << sv << endl;
-			free(nuc);
+			char refNuc=toupper(chromSeq[i]);
+			int refCount, altCount;
+			counts[0] = nA[i]; counts[1]=nC[i]; counts[2]=nG[i]; counts[3]=nT[i];
+			svn= GetRefAndAlt(refNuc, counts, refCount, altCount);
+			cout << chrom << "\t" << start+i << "\t" << nA[i] << "\t" << nC[i] << "\t" << nG[i] << "\t" << nT[i] << "\t" << nDel[i] << "\t0\t" << (char) toupper(chromSeq[i]) << "\t" << nucs[svn] << "\t" << refCount << "\t" << altCount << endl;
 		}
+		free(chromSeq);
 	}
 }

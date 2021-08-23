@@ -25,9 +25,9 @@ rule all:
         no_subreadbed="hmm/cov.no_subread.bed",
         bins="hmm/coverage.bins.bed.gz",
         avg="hmm/mean_cov.txt",
-        vitterout=expand("hmm/{ctg}.viterout.txt", ctg=contigs),
-        cn=expand("hmm/copy_number.{ctg}.bed", ctg=contigs),
-        allCN="hmm/copy_number.tsv",
+ #       vitterout=expand("hmm/{ctg}.viterout.txt", ctg=contigs),
+#        cn=expand("hmm/copy_number.{ctg}.bed", ctg=contigs),
+        allCN="hmm/copy_number.bed.gz",
 #        plot=expand("hmm/{bm}.noclip.pdf",bm=prefix_bam),
         don="hmm.done"
 
@@ -64,7 +64,7 @@ else:
             sd=SD,
         shell:"""
 cd hmm; ln -s cov.bed cov.no_subread.bed
-    """
+"""
 rule MakeIntersect:
     input:
         bed="hmm/cov.no_subread.bed",
@@ -72,7 +72,7 @@ rule MakeIntersect:
         bins="hmm/coverage.bins.bed.gz",
     params:
         asm=assembly,
-        sd=SD
+        sd=SD,
     shell:"""
 {params.sd}/BedToCoverage.py {input.bed} 100 {params.asm}.fai | bgzip -c > {output.bins}
 tabix -C {output.bins}
@@ -83,8 +83,11 @@ rule GetMeanCoverage:
         bins="hmm/coverage.bins.bed.gz",
     output:
         avg="hmm/mean_cov.txt",
+    params:
+        sd=SD,
     shell:"""
 zcat {input.bins} | awk 'BEGIN{{OFS="\\t";c=0;sum=0;}} sum=sum+$4;c=c+1;END{{print sum/c;}}' | tail -1> {output.avg}
+
 """
 
 rule RunVitter:
@@ -97,12 +100,12 @@ rule RunVitter:
         sd=SD,
         contig_prefix="{contig}",
         scaler=config['scaler'],
-        epsi=config['epsi']
+        epsi=config['epsi'],
     shell:"""
 mean=$(cat {input.avg})
 touch {output.cov}
 tabix {input.bins} {wildcards.contig} | cut -f 4 | \
-{params.sd}/hmcnc/HMM/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} {params.scaler} {params.epsi} 0
+{params.sd}/hmcnc/HMM/viterbi  /dev/stdin $mean hmm/{params.contig_prefix} 100 90 0
 
 """
 
@@ -122,7 +125,7 @@ rule combineVitter:
     input:
         allCopyNumberBED=expand("hmm/copy_number.{contig}.bed", contig=contigs),
     output:
-        allCN="hmm/copy_number.tsv",
+        allCN="hmm/copy_number.bed",
     run:
         import sys
         sys.stderr.write("Writing " + str(output.allCN) + "\n")
@@ -135,33 +138,48 @@ rule combineVitter:
         cn.close()
 
 
-
-rule PlotBins:
+rule IndexCN:
     input:
-        allCN="hmm/copy_number.tsv",
-        #aln=config["aln"],
-        avg="hmm/mean_cov.txt",
+        allCN="hmm/copy_number.bed"
     output:
-        plot="hmm/{prefix_bam}.noclip.pdf",
-    params:
-        sd=SD,
-        genome_prefix="{prefix_bam}",
+        gz="hmm/copy_number.bed.gz"
     shell:"""
-#touch {output.plot}
-#plot every 50000 points ~ 5MB
-Rscript {params.sd}/hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm/{params.genome_prefix} 50000 {input.avg}
-#touch {output.plot}
+bgzip -c {input.allCN} > {output.gz}
+tabix -C {output.gz}
 """
+
+
+#rule PlotBins:
+#    input:
+#        allCN="hmm/copy_number.bed.gz",
+#rule PlotBins:
+#    input:
+#        allCN="hmm/copy_number.tsv",
+        #aln=config["aln"],
+#        avg="hmm/mean_cov.txt",
+#    output:
+#        plot="hmm/{prefix_bam}.noclip.pdf",
+#    params:
+#        sd=SD,
+#        genome_prefix="{prefix_bam}",
+#    shell:"""
+##touch {output.plot}
+##plot every 50000 points ~ 5MB
+#Rscript {params.sd}/hmcnc/HMM/plot.HMM.noclip.R {input.allCN} hmm/{params.genome_prefix} 50000 {input.avg}
+##touch {output.plot}
+#"""
 
 
 rule Done:
     input:
-        allCN="hmm/copy_number.tsv",
+        allCN="hmm/copy_number.bed.gz",
         vitterout=expand("hmm/{ctg}.viterout.txt", ctg=contigs),
+        allCopyNumberBED=expand("hmm/copy_number.{contig}.bed", contig=contigs),
     output:
         don="hmm.done"
     shell:"""
 rm {input.vitterout}
+rm {input.allCopyNumberBED}
 touch {output}
 
 """
