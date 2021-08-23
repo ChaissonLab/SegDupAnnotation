@@ -496,7 +496,8 @@ rule RunDepthHmm:
     output:
         vo="hmm/copy_number.tsv",
         cb="hmm/coverage.bins.bed.gz",
-        mc="hmm/mean_cov.txt"
+        mc="hmm/mean_cov.txt",
+        don="hmm.done",
     params:
         grid_opts=config["grid_large"],
         sd=SD,
