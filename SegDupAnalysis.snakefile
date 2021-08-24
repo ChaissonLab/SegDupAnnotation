@@ -96,7 +96,6 @@ rule all:
 #        cn3_lrt="cn3/post_cn3.lrt.bed",        
        # sdDistPdf=config["species"]+".sd_dist.pdf",
       #  post=dynamic("cn3/post_cn3.{p}.bed"),#,p=pos), #lambda wildcards: getPos("cn3_region.txt")),
-        d="done.done",
         rbam="ref_aligned.bam",
         d="done.done",
 
