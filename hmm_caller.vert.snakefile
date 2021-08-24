@@ -151,6 +151,9 @@ tabix -C {output.gz}
 
 #rule PlotBins:
 #    input:
+#        allCN="hmm/copy_number.bed.gz",
+#rule PlotBins:
+#    input:
 #        allCN="hmm/copy_number.tsv",
         #aln=config["aln"],
 #        avg="hmm/mean_cov.txt",

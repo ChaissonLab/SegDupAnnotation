@@ -1836,10 +1836,11 @@ rule MappedSamIdentity:
     output:
         mappedsambed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
     params:
-        grid_opts=config["grid_small"]
+        grid_opts=config["grid_small"],
+        sd=SD,
     shell:"""
-samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
-"""
+ {params.sd}/hmcnc/HMM/samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
+ """
 
 rule MappedSamIdentityDups:
     input:

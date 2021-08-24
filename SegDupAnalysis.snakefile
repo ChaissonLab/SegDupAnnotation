@@ -96,6 +96,7 @@ rule all:
 #        cn3_lrt="cn3/post_cn3.lrt.bed",        
        # sdDistPdf=config["species"]+".sd_dist.pdf",
       #  post=dynamic("cn3/post_cn3.{p}.bed"),#,p=pos), #lambda wildcards: getPos("cn3_region.txt")),
+        d="done.done",
         rbam="ref_aligned.bam",
         d="done.done",
 
@@ -487,7 +488,7 @@ rule RunRefDepthHmm:
     input:
         v="ref_aligned.bam",
     output:
-        vo="hmm_ref/copy_number.tsv",
+        vo="hmm_ref/copy_number.bed.gz",
         cb="hmm_ref/coverage.bins.bed.gz",
         mc="hmm_ref/mean_cov.txt",
         done="Rhmm.done"
@@ -1816,9 +1817,10 @@ rule MappedSamIdentity:
     output:
         mappedsambed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
     params:
-        grid_opts=config["grid_small"]
+        grid_opts=config["grid_small"],
+        sd=SD,
     shell:"""
-samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
+ {params.sd}/hmcnc/HMM/samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
 """
 
 rule MappedSamIdentityDups:
