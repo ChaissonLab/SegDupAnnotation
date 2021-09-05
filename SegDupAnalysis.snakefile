@@ -97,8 +97,7 @@ rule all:
        # sdDistPdf=config["species"]+".sd_dist.pdf",
       #  post=dynamic("cn3/post_cn3.{p}.bed"),#,p=pos), #lambda wildcards: getPos("cn3_region.txt")),
         d="done.done",
-        rbam="ref_aligned.bam",
-        d="done.done",
+        rbam="ref_aligned.bam"
 
 
 #
@@ -1866,7 +1865,11 @@ rule SelectDupsOneIsoform:
     params:
         sd=SD
     shell:"""
-    cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | {params.sd}/SimplifyName.py | bedtools groupby -g 1,6,8,9 -c 1 -o first -full | cut -f 1-14 | sort > {output.iso}
+    cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
+  {params.sd}/SimplifyName.py | \
+  sort -k1,1 -k6,6 -k8,8n | \
+  bedtools groupby -g 1,6,8,9 -c 1 -o first -full | \
+  cut -f 1-14  > {output.iso}
 """
 
 rule GetGeneCoverage:
