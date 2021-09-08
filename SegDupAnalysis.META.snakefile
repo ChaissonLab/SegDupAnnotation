@@ -466,10 +466,11 @@ rule RunRefDepthHmm:
     params:
         grid_opts=config["grid_large"],
         sd=SD,
+        mp=config['map_p'],
     resources:
         load=16
     shell:"""
-snakemake --nolock -p -s {params.sd}/ref_hmm.snakefile -j 16 --rerun-incomplete 
+snakemake --nolock -p -s {params.sd}/ref_hmm.snakefile -j 16 --rerun-incomplete --config map_p={params.mp}
 """
 
 rule ConvertHMMCopyNumberToCollapsedDuplications:
