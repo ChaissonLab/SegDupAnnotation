@@ -70,7 +70,7 @@ rule MakeCovBed:
 samtools view -q 10 -F 2304 -@ 3 {input.bam} | {params.sd}/hmcnc/HMM/samToBed /dev/stdin/ --useH --flag   > {output.bed}
 """
 
-if config['index_params']==" -CLR":    
+if config['index_params']=="-CLR":    
     rule FilterSubreads:
         input:
             bed="hmm_ref/cov.bed",
