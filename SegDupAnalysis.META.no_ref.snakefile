@@ -9,12 +9,12 @@ configfile: "/project/mchaisso_100/projects/HPRC/sd_analysis.json"
 
 
 
-tempp=config['temp']
+tempp=config['t']
 if "temp2" not in config:
     config["temp2"] = config["temp"]
     
-if config['temp2']!="":
-    tempp=config['temp2']
+#if config['temp2']!="":
+#    tempp=config['temp2']
 
 
 #################################################################
@@ -193,76 +193,7 @@ samtools index -@2 {input.bam}
 """
 
 
-rule RefMakeFaiLinkOrig:
-    input:
-        asm=assm,
-    output:
-        orig="assembly.hg38.fa",
-        fai=assm+".fai"
-    params:
-        grid_opts=config["grid_small"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-ln -s {input.asm} ./{output.orig}
-ln -s {params.sd}/hmcnc/HMM/annotation/hg38.fa.fai {output.fai}
-"""
 
-
-
-# Map individual bams separately
-#
-    
-rule RefAlignBam:
-    input:
-        bam=lambda wildcards: bamFiles[wildcards.base],
-        #gli=assm+".gli"
-    output:
-        aligned="ref_aligned/{base}.bam"
-    params:
-        sd=SD,
-        ref=assm,
-        grid_opts=config["grid_large"],
-        temp=config["temp"],
-        mapping_params=config["mapping_params"]
-    resources:
-        load=16
-    shell:"""
-
-#{params.sd}/Cat.sh {input.bam} | ./home1/mchaisso/projects/LRA/lra/lra align {params.ref} - -t 16 -p s {params.mapping_params} | \
- #  samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
-
-{params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a --sam-hit-only | \
-   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned} 
-
-"""
-
-rule RefMergeBams:
-    input:
-        aln=expand("ref_aligned/{b}.bam", b=bamFiles.keys())
-    output:
-        bam="ref_aligned.bam",
-    params:
-        grid_opts=config["grid_medium"]
-    resources:
-        load=2
-    shell:"""
-samtools merge {output.bam} {input.aln} -@2
-"""
-
-rule RefIndexBam:
-    input:
-        bam="ref_aligned.bam"
-    output:
-        bai="ref_aligned.bam.bai"
-    resources:
-        load=2
-    params:
-        grid_opts=config["grid_medium"]
-    shell:"""
-samtools index -@2 {input.bam}
-"""
 
 
 rule MakeWMDB:
@@ -455,23 +386,7 @@ rule RunDepthHmm:
 snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete --config map_p={params.mp}
 """
 
-rule RunRefDepthHmm:
-    input:
-        v="ref_aligned.bam",
-    output:
-        vo="hmm_ref/copy_number.tsv",
-        cb="hmm_ref/coverage.bins.bed.gz",
-        mc="hmm_ref/mean_cov.txt",
-        done="Rhmm.done"
-    params:
-        grid_opts=config["grid_large"],
-        sd=SD,
-        mp=config['map_p'],
-    resources:
-        load=16
-    shell:"""
-snakemake --nolock -p -s {params.sd}/ref_hmm.snakefile -j 16 --rerun-incomplete --config map_p={params.mp}
-"""
+
 
 rule ConvertHMMCopyNumberToCollapsedDuplications:
     input:
@@ -1776,37 +1691,24 @@ rule cramBam:
 samtools view {input.bam} -C -@ 4 -T {input.orig} -o {output.cram}
 """
 
-rule RcramBam:
-    input:
-        rbam="ref_aligned.bam",
-        ref="assembly.hg38.fa"
-    output:
-        rcram="ref_aligned.cram",
-    params:
-        grid_opts=config["grid_medium"],
-    shell:"""
-samtools view {input.rbam} -C -@ 4 -T {input.ref} -o {output.rcram}
-
-"""
 
 
 
 rule RemoveBams:
     input:
-        rbam="ref_aligned.bam",
-        don="Rhmm.done",
+#       rbam="ref_aligned.bam",
+#        don="Rhmm.done",
         done="hmm.done",
         bam=config['bam'],
         s="collapsed_duplications.split.bed",
         ss="sedef_out/final.sorted.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
-        Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
+ #       Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
         asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
     output:
         d="done.done",
     shell:"""
 rm {input.aln}
-rm {input.Raln}
 touch {output}
  
     """
