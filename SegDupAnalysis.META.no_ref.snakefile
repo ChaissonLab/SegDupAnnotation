@@ -1385,25 +1385,26 @@ rule MapNamed:
     output:
         mapped="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2",
     params:
-        grid_opts=config["grid_large"]
+        grid_opts=config["grid_large"],
+        map_type="map-pb",
     resources:
         load=16
     shell:"""
-minimap2 {input.asm} {input.fa} -t 16 > {output.mapped}
+minimap2 -x {params.map_type} -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
 """
-
 rule MapNamedSam:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
         asm="assembly.orig.fasta"
     output:
-        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",        
+        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
     params:
-        grid_opts=config["grid_large"]
+        grid_opts=config["grid_large"],
+        map_type="map-pb",
     resources:
         load=12
     shell:"""
-minimap2 {input.asm} {input.fa} -t 12 -a > {output.mappedsam}
+minimap2 -ax {params.map_type} -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
 """
 
 rule MappedSamIdentity:
