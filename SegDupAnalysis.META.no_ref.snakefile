@@ -372,9 +372,6 @@ rule RunDepthHmm:
         bam=config["bam"],
         asm="assembly.orig.fasta"
     output:
-        vo="hmm/copy_number.bed.gz",
-        cb="hmm/coverage.bins.bed.gz",
-        mc="hmm/mean_cov.txt",
         don="hmm.done",
     params:
         grid_opts=config["grid_large"],

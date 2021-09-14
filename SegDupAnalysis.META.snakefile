@@ -441,9 +441,6 @@ rule RunDepthHmm:
         bam=config["bam"],
         asm="assembly.orig.fasta"
     output:
-        vo="hmm/copy_number.bed.gz",
-        cb="hmm/coverage.bins.bed.gz",
-        mc="hmm/mean_cov.txt",
         don="hmm.done",
     params:
         grid_opts=config["grid_large"],
@@ -459,9 +456,6 @@ rule RunRefDepthHmm:
     input:
         v="ref_aligned.bam",
     output:
-        vo="hmm_ref/copy_number.tsv",
-        cb="hmm_ref/coverage.bins.bed.gz",
-        mc="hmm_ref/mean_cov.txt",
         done="Rhmm.done"
     params:
         grid_opts=config["grid_large"],

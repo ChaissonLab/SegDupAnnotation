@@ -185,8 +185,9 @@ rule Done:
     output:
         don="hmm.done"
     shell:"""
-rm {input.vitterout}
-rm {input.allCopyNumberBED}
+cd hmm;
+find . -name "*.viterout.txt" -delete
+find . -name "copy_number.*.bed" -delete
 touch {output}
 
 """
