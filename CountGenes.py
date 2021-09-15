@@ -7,7 +7,7 @@ for line in sys.stdin:
 
     if gene not in genes:
         genes[gene] = [0,0]
-    if vals[7] == "multi":
+    if vals[6] == "multi":
         genes[gene][0]+=1
     else:
         genes[gene][1]+=int(vals[5])
