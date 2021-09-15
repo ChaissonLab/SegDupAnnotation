@@ -1378,6 +1378,7 @@ rule GetNamedFasta:
 """
 
         
+
 rule MapNamed:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
@@ -1390,7 +1391,7 @@ rule MapNamed:
     resources:
         load=16
     shell:"""
-minimap2 -x {params.map_type} -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
+minimap2 -x {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
 """
 rule MapNamedSam:
     input:
@@ -1402,9 +1403,9 @@ rule MapNamedSam:
         grid_opts=config["grid_large"],
         map_type="map-pb",
     resources:
-        load=12
+        load=16
     shell:"""
-minimap2 -ax {params.map_type} -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
+minimap2 -ax {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
 """
 
 rule MappedSamIdentity:
@@ -1694,19 +1695,19 @@ samtools view {input.bam} -C -@ 4 -T {input.orig} -o {output.cram}
 
 rule RemoveBams:
     input:
-#       rbam="ref_aligned.bam",
-#        don="Rhmm.done",
         done="hmm.done",
         bam=config['bam'],
         s="collapsed_duplications.split.bed",
         ss="sedef_out/final.sorted.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
- #       Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
         asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
     output:
         d="done.done",
     shell:"""
 rm {input.aln}
+
+mkdir -p aligned;cd aligned/;ln -s ../{input.bam} aligned_mm2.bam.bam; touch ../{input.bam};cd ..;
+
 touch {output}
  
     """

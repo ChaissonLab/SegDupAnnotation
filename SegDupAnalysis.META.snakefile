@@ -1459,7 +1459,7 @@ rule GetNamedFasta:
 {params.sd}/RenameFastaWithGenes.py {input.fa} {input.bed12} > {output.named}
 """
 
-        
+
 rule MapNamed:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
@@ -1472,7 +1472,7 @@ rule MapNamed:
     resources:
         load=16
     shell:"""
-minimap2 -x {params.map_type} -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
+minimap2 -x {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
 """
 rule MapNamedSam:
     input:
@@ -1484,11 +1484,11 @@ rule MapNamedSam:
         grid_opts=config["grid_large"],
         map_type="map-pb",
     resources:
-        load=12
+        load=16
     shell:"""
-minimap2 -ax {params.map_type} -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
+minimap2 -ax {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
 """
-
+      
 rule MappedSamIdentity:
     input:
         mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
@@ -1802,6 +1802,11 @@ rule RemoveBams:
     shell:"""
 rm {input.aln}
 rm {input.Raln}
+
+mkdir -p aligned;cd aligned/;ln -s ../{input.bam} aligned_mm2.bam.bam; touch ../{input.bam};cd ..;
+mkdir -p ref_aligned;cd ref_aligned/;ln -s ../{input.rbam} aligned_mm2.bam.bam; touch ../{input.rbam};cd ..;
+
+
 touch {output}
  
     """

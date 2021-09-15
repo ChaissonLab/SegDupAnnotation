@@ -1448,7 +1448,7 @@ rule MapNamed:
     resources:
         load=16
     shell:"""
-minimap2 -x {params.map_type} -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
+minimap2 -x {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
 """
 rule MapNamedSam:
     input:
@@ -1462,7 +1462,7 @@ rule MapNamedSam:
     resources:
         load=16
     shell:"""
-minimap2 -ax {params.map_type} -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
+minimap2 -ax {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
 """
         
 
@@ -1780,6 +1780,10 @@ rule RemoveBams:
     shell:"""
 rm {input.aln}
 rm {input.Raln}
+
+mkdir -p aligned;cd aligned/;ln -s ../{input.bam} aligned_mm2.bam.bam; touch ../{input.bam};cd ..;
+mkdir -p ref_aligned;cd ref_aligned/;ln -s ../{input.rbam} aligned_mm2.bam.bam; touch ../{input.rbam};cd ..;
+
 touch {output}
  
     """
