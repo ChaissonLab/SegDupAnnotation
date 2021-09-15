@@ -188,6 +188,7 @@ rule Done:
 cd hmm;
 find . -name "*.viterout.txt" -delete
 find . -name "copy_number.*.bed" -delete
+cd ..;
 touch {output}
 
 """
