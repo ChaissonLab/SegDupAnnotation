@@ -14,6 +14,12 @@ SD = os.path.dirname(workflow.snakefile)
 assm="/project/mchaisso_100/shared/references/hg38_noalts/hg38.no_alts.fasta"
 
 
+if "map_p" in config:
+    config['index_params']=config['map_p']
+    print(config['index_params'])
+else:
+    print("map_p not found")
+    print("using" + config['index_params'])
 
 
 ASM=SD+"/hmcnc/HMM/annotation/hg38.fa.fai"
@@ -70,7 +76,7 @@ rule MakeCovBed:
 samtools view -q 10 -F 2304 -@ 3 {input.bam} | {params.sd}/hmcnc/HMM/samToBed /dev/stdin/ --useH --flag   > {output.bed}
 """
 
-if config['index_params']==" -CLR":    
+if config['index_params']=="-CLR":    
     rule FilterSubreads:
         input:
             bed="hmm_ref/cov.bed",

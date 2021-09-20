@@ -417,14 +417,11 @@ rule RunDepthHmm:
         bam=config["bam"],
         asm="assembly.orig.fasta"
     output:
-        vo="hmm/copy_number.bed.gz",
-        cb="hmm/coverage.bins.bed.gz",
-        mc="hmm/mean_cov.txt",
         don="hmm.done",
     params:
         grid_opts=config["grid_large"],
         sd=SD,
-        mp=config['map_p'],
+        mp=config['mapping_params'],
     resources:
         load=16
     shell:"""
@@ -435,17 +432,15 @@ rule RunRefDepthHmm:
     input:
         v="ref_aligned.bam",
     output:
-        vo="hmm_ref/copy_number.bed.gz",
-        cb="hmm_ref/coverage.bins.bed.gz",
-        mc="hmm_ref/mean_cov.txt",
         done="Rhmm.done"
     params:
         grid_opts=config["grid_large"],
         sd=SD,
+        mp=config['mapping_params'],
     resources:
         load=16
     shell:"""
-snakemake --nolock -p -s {params.sd}/ref_hmm.snakefile -j 16 --rerun-incomplete 
+snakemake --nolock -p -s {params.sd}/ref_hmm.snakefile -j 16 --rerun-incomplete --config map_p={params.mp}
 """
 
 rule ConvertHMMCopyNumberToCollapsedDuplications:
@@ -1431,7 +1426,6 @@ rule GetNamedFasta:
 {params.sd}/RenameFastaWithGenes.py {input.fa} {input.bed12} > {output.named}
 """
 
-        
 rule MapNamed:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
@@ -1439,26 +1433,29 @@ rule MapNamed:
     output:
         mapped="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2",
     params:
-        grid_opts=config["grid_large"]
+        grid_opts=config["grid_large"],
+        map_type="map-pb",
     resources:
         load=16
     shell:"""
-minimap2 {input.asm} {input.fa} -t 16 > {output.mapped}
+minimap2 -x {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
 """
-
 rule MapNamedSam:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
         asm="assembly.orig.fasta"
     output:
-        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",        
+        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
     params:
-        grid_opts=config["grid_large"]
+        grid_opts=config["grid_large"],
+        map_type="map-pb",
     resources:
-        load=12
+        load=16
     shell:"""
-minimap2 {input.asm} {input.fa} -t 12 -a > {output.mappedsam}
+minimap2 -ax {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
 """
+        
+
 
 rule MappedSamIdentity:
     input:
@@ -1764,6 +1761,7 @@ rule RemoveBams:
         done="hmm.done",
         bam=config['bam'],
         s="collapsed_duplications.split.bed",
+        ss="sedef_out/final.sorted.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
         Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
         asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
@@ -1772,6 +1770,10 @@ rule RemoveBams:
     shell:"""
 rm {input.aln}
 rm {input.Raln}
+
+mkdir -p aligned;cd aligned/;ln -s ../{input.bam} aligned_mm2.bam.bam; touch ../{input.bam};cd ..;
+mkdir -p ref_aligned;cd ref_aligned/;ln -s ../{input.rbam} aligned_mm2.bam.bam; touch ../{input.rbam};cd ..;
+
 touch {output}
  
     """
