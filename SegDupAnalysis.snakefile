@@ -34,7 +34,7 @@ pos=[]
 subs=["all", "high_ident"]
 
 
-localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDupliatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, MakeFaiLinkOrig, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, IndexGenome, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes, AnnotateHighIdentity, GetTotalMasked, AnnotateResolvedTandemDups, GeneCountFact, GetFullGeneCountTable, FilterMultiExonBed, MappedSamIdentityDups, RemoveOriginal, GetCollapseByRange, HighestIdentPairs, MakeSedefIntv, SelctHighIdent, RemoveBams
+localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,  IntersectGenesWithFullSDList, FullDupToBed12, FullDupToLinks, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, FullDupToBed12, FiltDupToBed12, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDuplicatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, FindGenesInResolvedDups, SelectOneIsoform, SplitSplicedAndSingleExon, AnnotateLowCoverageFlanks, UnionMasked,GetNamedFasta, SelectDups, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, AddCollapsedGenes, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, GetAllMultiGenes, AnnotateHighIdentity, GetTotalMasked, AnnotateResolvedTandemDups, GeneCountFact, GetFullGeneCountTable, FilterMultiExonBed, MappedSamIdentityDups, RemoveOriginal, RemoveBams, MakeSedefIntv, HighestIdentPairs, SelectHighIdent, GetCollapseByRange, GetCollapsedMask
 
 
 
@@ -52,31 +52,8 @@ rule all:
     input:
         fai=assembly+".fai",
         bam=config["bam"],
-#        wm_db="wmdb",
-#        wm_intv="wm_mask_intervals",
-#        masked="assembly.masked.fasta",
-#        mm2sd="mm2_out/final.bed",
-        sedef_intv="sedef_out/all/final.sorted.bed.intv",
-        sedefPairs="sedef_out/all/final.sorted.bed.ident.pairs",        
-        sedef_high_uniq="sedef_out/all/final.sorted.bed.uniq.high",
         sedef="sedef_out/final.bed",
         sedef_sorted="sedef_out/final.sorted.bed",
-        sfilt1="sedef_out/final.sorted.low_copy.bed_stage1",
-        sfilt="sedef_out/final.sorted.low_copy.bed",
-        sedef_pairs_gml="sedef_out/final.sorted.bed.pairs.gml",
-        sedef_pairs_tab="sedef_out/final.sorted.bed.pairs.tab",
-        comps="sedef_out/final.sorted.bed.pairs.comps",
-        oneIsoform                 = expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt", sub=subs),
-        gencodeInDupsNotTandem     = expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt.not_tandem", sub=subs),
-        realignedOneIsoform        = expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt.sam", sub=subs),
-        b12                        = expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt.sam.bed12", sub=subs),
-        realignedOneIsoformFull    = expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.full.sam", sub=subs),
-        realignedOneIsoformFullBed = expand("sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.full.sam.bed12", sub=subs),
-        geneDups=expand("sedef_out/{sub}/resolved_dups_with_genes.bed", sub=["all", "high_ident"]),
-#        resGeneLinks="circos/genes_in_resolved_dups.links.tsv",
-#        resGeneNames="circos/genes_in_resolved_dups.links.names.tsv",
-#        filtSDResGeneLinks="circos_filtsd/genes_in_resolved_dups.links.tsv",
-#        filtSDResGeneNames="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
         mappedsam="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
         mappedsambed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
         mappedsambeddups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
@@ -88,50 +65,20 @@ rule all:
         fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.fact",
         gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count",
         asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
-        gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count_multi_single",            tandem_dups=expand("sedef_out/{sub}/tandem_dups.bed",sub=subs),
-        low_cov_tandem_dups=expand("sedef_out/{sub}/tandem_dups.low_cov.bed",sub=subs),
+        gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count_multi_single",            
         asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
-#        cn3_lrt="cn3/post_cn3.lrt.bed",        
-       # sdDistPdf=config["species"]+".sd_dist.pdf",
-      #  post=dynamic("cn3/post_cn3.{p}.bed"),#,p=pos), #lambda wildcards: getPos("cn3_region.txt")),
-        d="done.done",
-        rbam="ref_aligned.bam"
+# CIRCOS targets
+        links="circos/genes_in_resolved_dups.links.tsv",
+        names="circos/genes_in_resolved_dups.links.names.tsv",
+        d="done.done"
 
 
 #
 # Simple preprocessing, make sure there is an index on the assembly.
 #
-rule MakeSedefIntv:
-    input:
-        sedefFinal="sedef_out/all/final.sorted.bed.ident.pairs",
-    output:
-        sedefIntv="sedef_out/all/final.sorted.bed.intv",
-    params:
-        sd=SD
-    shell:"""
-{params.sd}/DivideBedToNonoverlappingIntervals.py {input.sedefFinal} | bedtools sort > {output.sedefIntv}
-"""
 
-rule HighestIdentPairs:
-    input:
-        sedefIntv="sedef_out/all/final.sorted.bed.final.filt",
-    output:
-        sedefPairs="sedef_out/all/final.sorted.bed.ident.pairs"
-    shell:"""
-cat {input.sedefIntv} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$21; print $4"\\t"$5"\\t"$6"\\t"$21;}}' | bedtools sort > {output.sedefPairs}
-"""
-
-rule SelectHighIdent:
-    input:
-        sedefIntv="sedef_out/all/final.sorted.bed.intv",
-        sedefPairs="sedef_out/all/final.sorted.bed.ident.pairs"
-    output:    
-        sedef_high_uniq="sedef_out/all/final.sorted.bed.uniq.high",
-    shell:"""
-bedtools intersect -a {input.sedefIntv} -b {input.sedefPairs} -loj -sorted | bedtools groupby -g 1-3 -c 7 -o max > {output.sedef_high_uniq}
-"""
 
 rule MakeFaiLinkOrig:
     input:
@@ -477,10 +424,11 @@ rule RunDepthHmm:
     params:
         grid_opts=config["grid_large"],
         sd=SD,
+        mp=config['map_p'],
     resources:
         load=16
     shell:"""
-snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete 
+snakemake --nolock -p -s {params.sd}/hmm_caller.vert.snakefile -j 16 --rerun-incomplete --config map_p={params.mp}
 """
 
 rule RunRefDepthHmm:
@@ -518,7 +466,7 @@ rule MakeCoverageBins:
         cb="collapsed_duplications.bed"
     output:
         cbcol="collapsed_duplications.bed.collapse",
-        #s="collapsed_duplications.split.bed",
+      #  s="collapsed_duplications.split.bed",
         ps="pre.collapsed_duplications.split.bed",
     params:
         grid_opts=config["grid_small"],
@@ -528,7 +476,6 @@ rule MakeCoverageBins:
     shell:"""
 bedtools merge -i {input.cb} -c 5 -o collapse > {output.cbcol}
 {params.sd}/SplitCoverageBins.py {output.cbcol} | bedtools merge -c 4,4 -o min,max > {output.ps}
-
 """
 
 rule GetCollapseByRange:
@@ -586,31 +533,29 @@ tabix -C {output.nf}
 
 
 
-
 rule lrt:
     input:
         nf="cn3.nucfreq.bed.gz",
         reg="cn3_region.txt",
+     #   done="getPos.done",
+       # ps=lambda wildcards: pos[wildcards.p],
     output:
         post="cn3/post_cn3.bed",
   #      lrt="cn3/post_cn3.lrt.bed",        
     params:
         grid_opts=config["grid_small"],
         sd=SD,
+        #ps="{p}",
     resources:
         load=1
     shell:"""
     rm -f {output}
-    echo "filtering cn3" >/dev/stderr
+    echo "filtering cn3"
     for r in ` cat {input.reg} `;do
         echo $r > /dev/stderr
         tabix {input.nf} $r |  python {params.sd}/het_check.ini.py -r $r | tr ":-" "\\t" >> {output.post}
     done    
 """
-
-
-
-
 
 rule filterCN3:
     input:
@@ -694,122 +639,6 @@ rule FilterSedef:
 awk  '{{ if ($NF > 0.5) {{ print;}} }} ' > {output.filtered} < {input.bed}
 """
 
-#
-# Some of the sedef alignments are masked repeats. Remove those.
-#
-rule CountMaskedSedef:
-    input:
-        s="sedef_out/final.sorted.first_filtered.bed",
-        asm="assembly.union_masked.fasta",
-    output:
-        f="sedef_out/final.sorted.bed.frac_masked"
-    params:
-        grid_opts=config["grid_medium"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-{params.sd}/CountMaskedBed.py {input.s} {input.asm} > {output.f}
-"""
-
-#
-# Count how many times an entry appears 
-#
-
-#
-# Count of often an entry overlaps with others
-#
-
-rule CountRepeatedEntries:
-    input:
-        missed="sedef_out/final.sorted.first_filtered.bed"
-    output:
-        counted="sedef_out/counted.tab"
-    params:
-        grid_opts=config["grid_medium"]
-    resources:
-        load=1
-    shell:"""
-bedtools intersect -loj -a {input.missed} -b {input.missed} -sorted -f 0.9 -r | bedtools groupby -g 1-6 -c 2 -o count | awk '{{ print $NF;}}' > {output.counted}
-"""
-
-
-#
-# Remove too masked, or too high copy
-#
-rule RemoveSedefTooMasked:
-    input:
-        counted="sedef_out/counted.tab",
-        fracMasked="sedef_out/final.sorted.bed.frac_masked",
-        inputBed="sedef_out/final.sorted.first_filtered.bed"
-    output:
-        filt1="sedef_out/final.sorted.low_copy.bed_stage1",
-        filt="sedef_out/final.sorted.low_copy.bed"
-    params:
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-paste  {input.inputBed} {input.counted} {input.fracMasked} | awk '{{ if  ($NF < 0.9 ) print;}}'  > {output.filt1}
-paste  {input.inputBed} {input.counted} {input.fracMasked} | awk '{{ if ($(NF-1) < 20 && $NF < 0.9 ) print;}}'  > {output.filt}
-"""
-
-#
-# Use graph analysis to finally remove high copy dups.
-#
-rule MakeSedefGraph:
-    input:
-        pairs="sedef_out/final.sorted.low_copy.bed"
-    output:
-        gml="sedef_out/final.sorted.bed.pairs.gml",
-        tab="sedef_out/final.sorted.bed.pairs.tab",  
-    params:
-        grid_opts=config["grid_medium"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-cat {input.pairs} | grep -v "^#" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$5"\\t"$6"\\tLEFT"; print $4"\\t"$5"\\t"$6"\\t"$1"\\t"$2"\\t"$3"\\tRIGHT";}}' | bedtools sort > {input.pairs}.lr
-{params.sd}/CountResolvedDuplicationMultiplicity.py {input.pairs}.lr {output.gml} {output.tab} --overlap 0.7
-
-
-"""
-
-#
-# Transform left/right (source/dest clusters) sedef output to the same # rows as input
-#
-rule MakeSedefGraphTable:
-    input:
-        pairs="sedef_out/final.sorted.low_copy.bed",
-        tab="sedef_out/final.sorted.bed.pairs.tab"     
-    output:
-        comps="sedef_out/final.sorted.bed.pairs.comps"
-    params:
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-paste {input.pairs}.lr {input.tab} | grep LEFT >  {output.comps}
-"""
-#
-#
-# Filter based on graph
-#
-rule FilterByGraphClusters:
-    input:
-        bed="sedef_out/final.sorted.low_copy.bed",
-        comps="sedef_out/final.sorted.bed.pairs.comps"
-    output:
-        filt="sedef_out/all/final.sorted.bed.final.filt",
-    params:
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-mkdir -p sedef_out/all
-paste {input.bed} {input.comps} | bioawk -c hdr '{{ if ($(NF-1) <= 20) print;}}' > {output.filt}
-
-"""
 
 rule AnnotateHighIdentity:
     input:
@@ -861,39 +690,8 @@ done < {input.asm}.fai > {output.dupPerContig}
 """
 
 
-rule AnnotateResolvedTandemDups:
-    input:
-        repeats="sedef_out/{seg}/final.sorted.bed.final.filt",
-    output:
-        tandem="sedef_out/{seg}/tandem_dups.bed"
-
-    shell:"""
-cat  {input.repeats} | awk '{{ if ($1 == $4 && $5 > $3 && $5-$3 < 1000 && prevPos!=$2) {{ print;}}  prevPos=$2;}}'  > {output.tandem}
-
-"""
 
 
-rule AnnotateLowCoverageFlanks:
-    input:
-        tandem="sedef_out/{seg}/tandem_dups.bed",
-        bam=config["bam"],
-        bai=config["bam"] + ".bai",
-        meancov="hmm/mean_cov.txt"
-    output:
-        low_cov_tandem_dups="sedef_out/{seg}/tandem_dups.low_cov.bed",
-    params:
-        grid_opts=config["grid_medium"]
-    resources:
-        load=1
-    shell:"""
-cut -f 1-3 {input.tandem} > {input.tandem}.3
-minCov=`cat {input.meancov} | awk '{{ print $1/5}}'`
-while read -r line; do 
-    region=`echo $line | awk '{{ print $1":"$3-100"-"$3+100; }}'`
-    minCov=`samtools depth {input.bam} -r $region | awk 'BEGIN{{ m=99999999;}} {{ if ($3 < m) {{ m=$3;}} }} END {{ print m;}}'`
-    echo -e "$line\t$minCov" | tr " " "\t"
-done < {input.tandem}.3  | awk -v m=$minCov '{{ if ($4 < m) print;}}' > {output.low_cov_tandem_dups}
-"""
 
 
 #END
@@ -931,44 +729,9 @@ rule GencodeOneIsoCN:
 cat {input.gccn} | tr "|" "\\t" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$9"\\t"$NF;}}' | bedtools groupby -g 4 -c 5 -o median > {output.gccn_iso}
 """
 
-rule IntersectGenesWithFullSDList:
-    input:
-        dups="sedef_out/{sub}/final.sorted.bed.final.filt",
-        refGenes="gencode.mapped.bam.bed12"
-    output:
-        fullDup="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.full.bed",
-    params:
-        grid_opts=config["grid_small"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-na=`head -1 {input.dups} | awk '{{ print NF;}}'`
-nb=`head -1 {input.refGenes} | awk '{{ print NF;}}'`
-tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
-bedtools intersect -a {input.refGenes} -b {input.dups} -f 1 -wb | \
- awk -vt=$tot '{{ if (NF == t) print;}}' | \
- bedtools groupby -g 1-4 -c 1 -o first -full | cut -f 1-$tot | \
- {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
- {params.sd}/FilterLongestInOverlapSet.py stdin > {output.fullDup}
-"""
 
 
 
-rule ResolvedDupsWithGenes:
-    input:
-        dupGenes="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.full.bed",
-        dups="sedef_out/{sub}/final.sorted.bed.final.filt",
-    output:
-        geneDups="sedef_out/{sub}/resolved_dups_with_genes.bed"
-    params:
-        sd=SD,
-        grid_opts=config["grid_small"]
-    shell:"""
-bedtools intersect -a {input.dups} -b {input.dupGenes} -F 1 -wb | \
-   awk 'BEGIN {{OFS="\\t";}} {{ print $1,$2,$3,$42,"resolved"; print $4,$5,$6,$42,"resolved"}}' | \
-   bedtools sort |  bedtools merge -c 4,5 -o collapse >  {output.geneDups}
-"""
 
 rule CombineCoordinatesOfDupsWithGenes:
     input:
@@ -1002,100 +765,34 @@ echo -e "Bases\t$nb" >> {output.res}
 echo -e "Genes\t$ng" >> {output.res}
 """
 
-rule RealignFullDup:
+
+
+
+rule GeneDupsToLinks:
     input:
-        oneIsoform="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.full.bed",
-        asm="assembly.orig.fasta",
-        refGenes=config["genemodel"]["gencode"],
-        refGeneBam="gencode.mapped.bam"
+        bed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups",
     output:
-        realignedOneIsoform="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.full.sam",
+        links="circos/genes_in_resolved_dups.links.tsv",
+        names="circos/genes_in_resolved_dups.links.names.tsv",
     params:
         sd=SD,
         grid_opts=config["grid_small"]
     resources:
         load=1
     shell:"""
-{params.sd}/RemapRegion.sh {input.oneIsoform} {input.asm} {input.refGenes} {input.refGeneBam} {output.realignedOneIsoform}
+mkdir -p circos
+
+cat  {input.bed}  | \
+ grep -v "Gm" | \
+ {params.sd}/FilterMembersFromSameIsoformSet.py  stdin | \
+ tr "/" "\\t" | \
+ {params.sd}/SimplifyName.py  | \
+ tr "\:\-" "\\t\\t" | \
+ {params.sd}/DupsToArcs.py {output.links} {output.names}
+
 """
 
-rule FullDupToBed12:
-    input:
-        realignedOneIsoform="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.full.sam",
-    output:
-        bed="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.full.sam.bed12",
-    params:
-        sd=SD,
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-bedtools bamtobed -bed12 -i {input.realignedOneIsoform} | {params.sd}/SimplifyNameInBed12.py | sort -k4,4 -k1,1 -k2,2n | bedtools groupby -g 1-3 -c 2 -o first -full > {output.bed}
-"""
 
-rule FiltDupToBed12:
-    input:
-        realignedOneIsoform="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.full.sam",
-    output:
-        bed="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt.sam.bed12",
-    params:
-        grid_opts=config["grid_small"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-bedtools bamtobed -bed12 -i {input.realignedOneIsoform} | {params.sd}/SimplifyNameInBed12.py | sort -k4,4 -k1,1 -k2,2n | bedtools groupby -g 1-3 -c 2 -o first -full > {output.bed}
-"""
-
-#rule FiltDupToLinks:
-#    input:
-#        bed="sedef_out/high_ident/genes_in_resolved_dups.one_isoform.bed.filt.sam.high_ident.bed12",
-#    output:
-#        links="circos_filtsd/genes_in_resolved_dups.links.tsv",
-#        names="circos_filtsd/genes_in_resolved_dups.links.names.tsv",
-#    params:
-#        sd=SD,
-#        grid_opts=config["grid_small"]
-#    resources:
-#        load=1
-#    shell:"""
-#mkdir -p circos
-#cat {input.bed} | tr "#" "_" | {params.sd}/Bed12ToArcs.py {output.links} {output.names}
-#"""
-
-
-#rule FullDupToLinks:
-#    input:
-#        bed="sedef_out/high_ident/genes_in_resolved_dups.one_isoform.bed.full.sam.bed12",
-#    output:
-#        links="circos/genes_in_resolved_dups.links.tsv",
-#        names="circos/genes_in_resolved_dups.links.names.tsv"
-#    params:
-#        sd=SD,
-#        grid_opts=config["grid_small"]
-#    resources:
-#        load=1
-#    shell:"""
-#mkdir -p circos
-#cat {input.bed} | tr "#" "_" |  {params.sd}/Bed12ToArcs.py {output.links} {output.names}
-#"""
-
-rule RemapBed:
-    input:
-        oneIsoform="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt",
-        asm="assembly.orig.fasta",
-        refGenes=config["genemodel"]["gencode"],
-        refGeneBam="gencode.mapped.bam"
-    output:
-        realignedOneIsoform="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt.sam",
-    params:
-        sd=SD,
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-{params.sd}/RemapRegion.sh {input.oneIsoform} {input.asm} {input.refGenes} {input.refGeneBam} {output.realignedOneIsoform}
-"""
    
 rule RemappedBedToSummaryTable:
     input:
@@ -1121,34 +818,34 @@ grep -v "^@" {input.realignedOneIsoform} | awk '{{ for (i=1; i <= NF; i++) {{ if
 bedtools groupby -g 4 -c 4 -i {output.b12} -o count > {output.counts}
 """
 
-#rule MakeCircOS:
-#    input:
-#        asm="assembly.orig.fasta",
-#       coll="gencode.mapped.bam.bed12.dups.unique",
-#        links="circos/genes_in_resolved_dups.links.tsv",
-#        names="circos/genes_in_resolved_dups.links.names.tsv"
-#    output:
-#        plt="circos/circos.png"
-#    params:
-#        sd=SD,
-#        grid_opts=config["grid_medium"],
-#        name_map=config["name_map"]
-#    resources:
-#       load=1
-#    shell:"""
-#mkdir -p circos
-#cat {input.coll} | tr "#" "_" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
-#cat {input.asm}.fai | tr "#" "_" > {input.asm}.fai.u
-#cut -f 1 {input.asm}.fai.u | sed "s/_/__/g" | tr "#" "_" > {input.asm}.display_name
-#paste {input.asm}.fai.u {input.asm}.display_name | awk '{{ if ($2 > 200000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}}  }}' | \
- # {params.sd}/ReplaceChromName.py {params.name_map} >  circos/karyotype.txt
+rule MakeCircOS:
+    input:
+        asm="assembly.orig.fasta",
+        coll="gencode.mapped.bam.bed12.dups.unique",
+        links="circos/genes_in_resolved_dups.links.tsv",
+        names="circos/genes_in_resolved_dups.links.names.tsv"
+    output:
+        plt="circos/circos.png"
+    params:
+        sd=SD,
+        grid_opts=config["grid_medium"],
+        name_map=config["name_map"]
+    resources:
+       load=1
+    shell:"""
+mkdir -p circos
+cat {input.coll} | grep -v "Gm" | tr "#" "_" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t"$(NF-1)"\\t"$NF;}}' > {input.coll}.name.cn
+cat {input.asm}.fai | tr "#" "_" > {input.asm}.fai.u
+cut -f 1 {input.asm}.fai.u | sed "s/_/__/g" | tr "#" "_" > {input.asm}.display_name
+paste {input.asm}.fai.u {input.asm}.display_name | awk '{{ if ($2 > 500000) {{ print "chr\\t-\\tvar"$1"\\t"$6"\\t"0"\\t"$2"\\t"$1;}}  }}' | \
+ {params.sd}/ReplaceChromName.py NO_OP >  circos/karyotype.txt
 
-#cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$4;}}' | {params.sd}/ReplaceChromName.py {params.name_map} > circos/cn.lab.txt
-#cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$5;}}' | {params.sd}/ReplaceChromName.py {params.name_map} > circos/cn.txt
+cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$4;}}' | {params.sd}/ReplaceChromName.py {params.name_map} > circos/cn.lab.txt
+cat {input.coll}.name.cn | awk '{{ print "var"$1"\\t"$2"\\t"$3"\\t"$5;}}' | {params.sd}/ReplaceChromName.py {params.name_map} > circos/cn.txt
 
 #{params.sd}/MakeDup.py --bed {input.coll}  --collapsed {input.coll}.name.cn --links circos/resolved_dups.txt --labels circos/resolved_dups.labels.txt
-#cd circos && circos --conf {params.sd}/circos.conf 
-#"""
+cd circos && circos --conf {params.sd}/circos.conf 
+"""
 
 
 #rule MakeCircOSHighIdentityDups:
@@ -1508,53 +1205,6 @@ else
 fi
 """
 
-rule FindGenesInResolvedDups:
-    input:
-        notmasked="sedef_out/{sub}/final.sorted.bed.final.filt",
-        gencode="gencode.mapped.bam.bed12"
-    output:
-        gencodeInDups="sedef_out/{sub}/genes_in_resolved_dups.bed.filt",
-    params:
-        grid_opts=config["grid_small"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-
-na=`head -1 {input.notmasked} | awk '{{ print NF;}}'`
-nb=`head -1 {input.gencode} | awk '{{ print NF;}}'`
-tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b+1;}}'`
-
-cat '{input.notmasked}' | \
-  awk '{{ print $0"\\t"NR; a=$1;b=$2;c=$3;d=$4;e=$5;f=$6; $1=d;$2=e;$3=f; $4=a;$5=b;$6=c; print $0"\\t"NR;}}' | \
-    tr " " "\\t" | \
-    bedtools intersect -loj -a {input.gencode} -b stdin -f 1  | \
-   awk -v totFields=$tot '{{ if (NF==totFields) print;}}' | awk '{{ if ($13 != ".") print ;}}'  | awk -vt=$tot '{{ if (NF==t) print;}}' | \
- {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
-  {params.sd}/FilterLongestInOverlapSet.py stdin >  {output.gencodeInDups}
-
-"""
-
-rule SelectOneIsoform:
-    input:
-        anyIsoform="sedef_out/{sub}/genes_in_resolved_dups.bed.filt",
-        falseTandem="sedef_out/{sub}/tandem_dups.low_cov.bed",
-    output:
-        oneIsoform="sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt",
-        gencodeInDupsNotTandem     = "sedef_out/{sub}/genes_in_resolved_dups.one_isoform.bed.filt.not_tandem",
-    params:
-        grid_opts=config["grid_small"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-na=`head -1 {input.anyIsoform} | awk '{{ print NF;}}'`
-nb=`head -1 {input.falseTandem} | awk '{{ print NF;}}'`
-tot=`echo "" | awk -va=$na -vb=$nb '{{ print a+b;}}'`
-
-{params.sd}/FilterMembersFromSameIsoformSet.py {input.anyIsoform}  > {output.oneIsoform}
-bedtools intersect -v -a {output.oneIsoform} -b  {input.falseTandem} > {output.gencodeInDupsNotTandem}
-"""
 
 rule SplitSplicedAndSingleExon:
     input:
@@ -1816,9 +1466,10 @@ rule MappedSamIdentity:
     output:
         mappedsambed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
     params:
-        grid_opts=config["grid_small"]
+        grid_opts=config["grid_small"],
+        sd=SD,
     shell:"""
-samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
+ {params.sd}/hmcnc/HMM/samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
 """
 
 rule MappedSamIdentityDups:
@@ -1857,6 +1508,16 @@ rule SelectDups:
 
 
 
+#rule SelectDupsOneIsoform:
+#    input:
+#        dups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups",
+#    output:
+#        iso="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform"
+#    params:
+#        sd=SD
+#    shell:"""
+#    cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | {params.sd}/SimplifyName.py | bedtools groupby -g 1,6,8,9 -c 1 -o first -full | cut -f 1-14 | sort > {output.iso}
+#"""
 rule SelectDupsOneIsoform:
     input:
         dups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups",
@@ -2049,7 +1710,8 @@ rule GeneCountFact:
     shell:"""
 cat {input.depth_filt} | awk -v spec={params.spec} '{{ $5=sprintf("%.3f",int($5*200)*0.5); if ($7 == "collapse") {{ for (i=1;i<$6; i++) {{ print $0"\\t"spec;}} }} else {{ print $0"\\t"spec;}} }}' | tr " " "\\t" > {output.fact}
 """
-    
+
+
 rule GetFullGeneCountTable:
     input:
         depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt",
