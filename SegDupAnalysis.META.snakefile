@@ -1575,7 +1575,7 @@ rule GetGeneCoverage:
         grid_opts=config["grid_small"]
     shell:"""
 cat {input.iso} | awk '{{ print $6"\\t"$8"\\t"$9"\\t"$0;}}' | bedtools groupby -g 1-3 -o first -full -c 1 >  {output.bed}
-{params.sd}/GetCoverageOfRegions.sh {output.bed} {input.bins} {input.mean}  > {output.cov}
+{params.sd}/GetCoverageOfRegions.sh {output.bed} {input.bins} {input.mean}  {params.sd} > {output.cov}
 """
 
 rule GetCombinedTable:

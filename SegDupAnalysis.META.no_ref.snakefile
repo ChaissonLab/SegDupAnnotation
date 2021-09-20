@@ -373,6 +373,9 @@ rule RunDepthHmm:
         asm="assembly.orig.fasta"
     output:
         don="hmm.done",
+        bed="hmm/copy_number.bed.gz",
+        c="hmm/mean_cov.txt",
+        cov="hmm/coverage.bins.bed.gz",
     params:
         grid_opts=config["grid_large"],
         sd=SD,
@@ -1494,7 +1497,7 @@ rule GetGeneCoverage:
         grid_opts=config["grid_small"]
     shell:"""
 cat {input.iso} | awk '{{ print $6"\\t"$8"\\t"$9"\\t"$0;}}' | bedtools groupby -g 1-3 -o first -full -c 1 >  {output.bed}
-{params.sd}/GetCoverageOfRegions.sh {output.bed} {input.bins} {input.mean}  > {output.cov}
+{params.sd}/GetCoverageOfRegions.sh {output.bed} {input.bins} {input.mean}  {params.sd} > {output.cov}
 """
 
 rule GetCombinedTable:
