@@ -365,7 +365,8 @@ rule CombineMasked:
         asm=assembly
     output: 
         masked="assembly.repeat_masked.fasta",
-        maskedout="assembly.repeat_masked.fasta.out"
+        maskedout="assembly.repeat_masked.fasta.out",
+        done="mask.done",
     params:
         grid_opts=config["grid_large"],
         sd=SD
@@ -373,6 +374,8 @@ rule CombineMasked:
         load=1
     shell:"""
 {params.sd}/CombineMasked.py {input.mask} {input.asm}.fai {output.masked} {output.maskedout}
+
+touch {output.done}
 """
 
 
@@ -605,7 +608,8 @@ rule SortSedef:
     input:
         bed="sedef_out/final.bed"
     output:
-        s="sedef_out/final.sorted.bed"
+        s="sedef_out/final.sorted.bed",
+        done="sedef.done",
     params:
         grid_opts=config["grid_medium"]
     resources:
@@ -615,6 +619,8 @@ first=`head -1 {input.bed} | awk '{{ print NF;}}'`
 sort -k1,1 -k2,2n {input.bed} | \
   awk -vf=$first '{{ if (NF == f) print;}}' | \
   bedtools groupby -g 1-6 -o first -full -c 1 | cut -f 1-$first > {output.s}
+
+touch {output.done}
 """
 
 #
