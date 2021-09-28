@@ -1460,20 +1460,6 @@ rule GetNamedFasta:
 """
 
 
-rule MapNamed:
-    input:
-        fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
-        asm="assembly.orig.fasta"
-    output:
-        mapped="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2",
-    params:
-        grid_opts=config["grid_large"],
-        map_type="map-pb",
-    resources:
-        load=16
-    shell:"""
-minimap2 -x {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
-"""
 rule MapNamedSam:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
@@ -1488,7 +1474,22 @@ rule MapNamedSam:
     shell:"""
 minimap2 -ax {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
 """
-      
+        
+
+rule MapNamed:
+    input:
+        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
+    output:
+        mapped="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2",
+    params:
+        grid_opts=config["grid_large"],
+        map_type="map-pb",
+    shell:"""
+paftools.js sam2paf {input.mappedsam} >{output.mapped}
+
+"""
+
+
 rule MappedSamIdentity:
     input:
         mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
