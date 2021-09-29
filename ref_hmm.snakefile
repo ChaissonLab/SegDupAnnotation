@@ -111,7 +111,7 @@ rule MakeIntersect:
         asm=assm,
         sd=SD,
     shell:"""
-intersectBed -sorted -c -a {input.windows} -b {input.bed}| bgzip -c > {output.bins}
+{params.sd}/BedToCoverage.py {input.bed} 100 {params.asm}.fai | bgzip -c > {output.bins}
 tabix -C {output.bins}
 """
 
@@ -121,8 +121,11 @@ rule GetMeanCoverage:
         bins="hmm_ref/coverage.bins.bed.gz",
     output:
         avg="hmm_ref/mean_cov.txt",
+    params:
+        sd=SD,
     shell:"""
 zcat {input.bins} | awk 'BEGIN{{OFS="\\t";c=0;sum=0;}} sum=sum+$4;c=c+1;END{{print sum/c;}}' | tail -1> {output.avg}
+
 """
 
 rule RunVitter:
