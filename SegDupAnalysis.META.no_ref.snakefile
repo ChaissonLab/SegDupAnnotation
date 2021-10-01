@@ -1364,14 +1364,15 @@ samtools index -c {output.bam}
 rule GetGeneBoundaryFasta:
     input:
         bed="{data}.mapped.bam.bed12.multi_exon",
-        asm="assembly.orig.fasta"
+        asm="assembly.orig.fasta",
     output:
+        bedr="{data}.mapped.bam.bed12.multi_exon.rgn",
         fa="{data}.mapped.bam.bed12.multi_exon.fasta",
     params:
         grid_opts=config["grid_small"],
     shell:"""
-cat {input.bed} | awk '{{ print $1":"$2"-"$3;}}' > {input.bed}.rgn
-samtools faidx {input.asm} -r {input.bed}.rgn > {output.fa}
+cat {input.bed} | awk '{{ print $1":"$2"-"$3;}}' > {output.bedr}
+samtools faidx {input.asm} -r {output.bedr} > {output.fa}
 """
 
 rule GetNamedFasta:
@@ -1711,12 +1712,28 @@ rule RemoveBams:
         ss="sedef_out/final.sorted.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
         asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
+    params:
+        reads=expand("{b}", b=_reads),
     output:
         d="done.done",
     shell:"""
 rm {input.aln}
 
-mkdir -p aligned;cd aligned/;ln -s ../{input.bam} aligned_mm2.bam.bam; touch ../{input.bam};cd ..;
+mkdir -p aligned;
+
+touch {input.aln};
+
+#cd aligned/;
+#for r in ` echo {params.reads} `;do
+#    ln -s $r .
+#    name='echo $r |tr "//" "\n" |tail -1'
+#    mv $name $name.bam 
+#done
+
+touch {input.bam};
+
+
+#cd ..;
 
 touch {output}
  
