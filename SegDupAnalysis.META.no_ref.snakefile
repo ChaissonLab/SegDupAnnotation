@@ -1717,7 +1717,7 @@ rule RemoveBams:
     output:
         d="done.done",
     shell:"""
-rm {input.aln}
+rm -f {input.aln}
 
 mkdir -p aligned;
 
