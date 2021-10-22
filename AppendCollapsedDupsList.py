@@ -12,7 +12,7 @@ for i in range(0, len(aln)):
     
 for d in depth:
     extra=str(max(0,int(d[-1])-2))
-    d[-1] = "-1"
+    d[-1] = "Original"
     d.append(extra)
     d.append("collapse")
     sys.stdout.write("\t".join(d) + "\n")
