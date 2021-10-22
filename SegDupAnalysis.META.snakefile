@@ -389,7 +389,8 @@ rule CombineMasked:
         asm=assembly
     output: 
         masked="assembly.repeat_masked.fasta",
-        maskedout="assembly.repeat_masked.fasta.out"
+        maskedout="assembly.repeat_masked.fasta.out",
+        done="mask.done",
     params:
         grid_opts=config["grid_large"],
         sd=SD
@@ -397,8 +398,9 @@ rule CombineMasked:
         load=1
     shell:"""
 {params.sd}/CombineMasked.py {input.mask} {input.asm}.fai {output.masked} {output.maskedout}
-"""
 
+touch {output.done}
+"""
 
 #
 #  The final masked genome combines wm and repeatmasker
@@ -629,7 +631,8 @@ rule SortSedef:
     input:
         bed="sedef_out/final.bed"
     output:
-        s="sedef_out/final.sorted.bed"
+        s="sedef_out/final.sorted.bed",
+        done="sedef.done",
     params:
         grid_opts=config["grid_medium"]
     resources:
@@ -639,6 +642,8 @@ first=`head -1 {input.bed} | awk '{{ print NF;}}'`
 sort -k1,1 -k2,2n {input.bed} | \
   awk -vf=$first '{{ if (NF == f) print;}}' | \
   bedtools groupby -g 1-6 -o first -full -c 1 | cut -f 1-$first > {output.s}
+
+touch {output.done}
 """
 
 #
@@ -1460,20 +1465,6 @@ rule GetNamedFasta:
 """
 
 
-rule MapNamed:
-    input:
-        fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
-        asm="assembly.orig.fasta"
-    output:
-        mapped="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2",
-    params:
-        grid_opts=config["grid_large"],
-        map_type="map-pb",
-    resources:
-        load=16
-    shell:"""
-minimap2 -x {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
-"""
 rule MapNamedSam:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
@@ -1488,7 +1479,22 @@ rule MapNamedSam:
     shell:"""
 minimap2 -ax {params.map_type} -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
 """
-      
+        
+
+rule MapNamed:
+    input:
+        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
+    output:
+        mapped="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2",
+    params:
+        grid_opts=config["grid_large"],
+        map_type="map-pb",
+    shell:"""
+paftools.js sam2paf {input.mappedsam} >{output.mapped}
+
+"""
+
+
 rule MappedSamIdentity:
     input:
         mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
