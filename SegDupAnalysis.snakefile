@@ -1439,7 +1439,7 @@ rule MapNamedSam:
     resources:
         load=16
     shell:"""
-minimap2 -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mapped}
+minimap2 -a -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mappedsam}
 """
         
 
@@ -1453,7 +1453,6 @@ rule MapNamed:
     resources:
         load=16
     shell:"""
-minimap2 -a -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa} > {output.mappedsam}
 paftools.js sam2paf {input.mappedsam} >{output.mapped}
 """
 

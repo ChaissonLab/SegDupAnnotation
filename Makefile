@@ -1,14 +1,11 @@
-all: comask bemask mask2bed nl toupper sedef/sedef hmcnc/HMM/viterbi bamToFreq
+all: comask bemask mask2bed nl toupper sedef/sedef hmcnc/src/hmmcnc bamToFreq
 
-
-htslib/lib/libhts.a:
-	cd htslib && autoheader && autoconf && ./configure --disable-s3 --disable-lzma --disable-bz2 --prefix=$(PWD)/htslib/ && make -j 4 && make install
 
 sedef/sedef:
 	cd sedef && make -j 4
 
-hmcnc/HMM/viterbi: hmcnc/HMM/viterbi.cpp
-	cd hmcnc/HMM && snakemake -s make.smk.py --config boost=$(CONDA_PREFIX)/include -j 1 -p
+hmcnc/src/hmmcnc: hmcnc/src/hmmcnc.cpp
+	cd hmcnc/src && make
 
 toupper: ToUpper.cpp htslib/lib/libhts.a
 	g++ -O2  $< -o $@  -I htslib/include -Lhtslib/lib -lhts -Wl,-rpath,$(PWD)/htslib/lib  -lhts -lz -lpthread
