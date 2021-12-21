@@ -17,6 +17,6 @@ for line in inFile:
     srcEnd=int(nameRgn[3])
     
     if (chrom == srcChrom and abs(srcStart - start) < 100 and abs(srcEnd-end) < 100):
-        sys.stdout.write(line.strip() + "\tORIG\n")
+        sys.stdout.write(line.strip() + "\tOriginal\n")
     else:
-        sys.stdout.write(line.strip() + "\tCOPY\n")
+        sys.stdout.write(line.strip() + "\tCopy\n")

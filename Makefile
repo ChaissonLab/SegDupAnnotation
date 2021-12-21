@@ -1,4 +1,4 @@
-all: comask bemask mask2bed nl toupper sedef/sedef hmcnc/src/hmmcnc bamToFreq
+all: comask hardmask bemask mask2bed nl toupper sedef/sedef hmcnc/src/hmmcnc bamToFreq
 
 
 sedef/sedef:
@@ -10,6 +10,8 @@ hmcnc/src/hmmcnc: hmcnc/src/hmmcnc.cpp
 toupper: ToUpper.cpp htslib/lib/libhts.a
 	g++ -O2  $< -o $@  -I htslib/include -Lhtslib/lib -lhts -Wl,-rpath,$(PWD)/htslib/lib  -lhts -lz -lpthread
 
+hardmask: HardMask.cpp
+	g++ -O2 $< -o $@ -I $(CONDA_PREFIX)/include -L$(CONDA_PREFIX)/lib -lhts -Wl,-rpath,$(CONDA_PREFIX)/lib
 
 comask: CombineMask.cpp htslib/lib/libhts.a
 	g++ -O2  $< -o $@  -I htslib/include -Lhtslib/lib -lhts -Wl,-rpath,$(PWD)/htslib/lib  -lhts -lz -lpthread
