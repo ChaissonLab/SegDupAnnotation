@@ -18,7 +18,7 @@ def ParseGeneNameFromIDList(nameList):
         accIdx=4
         isoformName=allVals[i][j].split("|")[4]
         geneName=allVals[i][j].split("|")[5]
-        return (true, isoformName, geneName)
+        return (True, isoformName, geneName)
     elif len(entries) == 2:
         isoformName=nameList
         geneName=entries[0]

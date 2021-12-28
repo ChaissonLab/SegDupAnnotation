@@ -481,7 +481,7 @@ rule GetCollapsedMask:
         sd=SD
     shell:"""
 bedtools getfasta -fi {input.asm} -bed {input.col} | {params.sd}/nl > {output.colmask}
-paste {input.col} {output.colmask} | awk '{{ if ($7 < 0.9) print;}}' > {output.not_masked}
+paste {input.col} {output.colmask} | awk '{{ if ($8 < 0.9) print;}}' > {output.not_masked}
 """
         
 
@@ -1529,7 +1529,7 @@ rule SelectDupsOneIsoform:
   {params.sd}/SimplifyName.py | \
   sort -k1,1 -k6,6 -k8,8n | \
   bedtools groupby -g 1,6,8,9 -c 1 -o first -full | \
-  cut -f 1-15  > {output.iso}
+  cut -f 1-15 | sort -k4,4 -k1,1 -k2,2n > {output.iso}
 """
 
 rule CalcMeanCov:
@@ -1742,7 +1742,7 @@ rule GetFullGeneCountTable:
 # 
 cat {input.depth_filt} | awk '{{ if (NR > 1) {{ $6=1;}} print; }}' | tr " " "\\t" | bedtools groupby -header -g 4 -c 6,6 -o mean,sum | awk '{{ if (NR==1) {{ print "gene\\tasmCount\\tcolCount";}} else print;}}' >  {output.asm_gene_count}
 
-{params.sd}/CountGenes.py < {input.depth_filt} > {output.gene_count_2column}
+{params.sd}/CountGenes.py  {input.depth_filt} > {output.gene_count_2column}
 
 grep -v Original {input.depth_filt} | awk '{{ if ($7 == 0) {{ $7=1;}} print;}}' | tr " " "\\t" | bedtools groupby -g 4 -c 7 -o sum | awk '{{ if ($2 >= 1) {{ print;}} }}' > {output.gene_count}
 """
