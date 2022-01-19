@@ -58,17 +58,13 @@ rule all:
         mappedsam="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
         mappedsambed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
         mappedsambeddups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
-        dupsAnnotated="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.annotated",        
-        mappedsambeddupsorig="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.orig",
         mappedsambeddupsorigAnnot="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig",
         mappeddupsOneIsoform="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.one_isoform",
         combined_gencode="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined",
-        comb_with_unique="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map",
-        comb_with_depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth",
-        fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.fact",
-        gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count",
-        asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
-        gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count_multi_single",            
+        comb_with_depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
+        fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.fact",
+        gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count",
+        gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count_multi_single",            
         asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         sedef_high_uniq="sedef_out/all/final.sorted.bed.uniq.high",        
@@ -861,20 +857,6 @@ cd circos && circos --conf {params.sd}/circos.conf
 #
 #"""
 
-rule GetAllMultiGenes:
-    input:
-        single="gencode.mapped.bam.bed12.dups.unique.cn",
-        multi="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined"
-    output:
-        both="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map"
-    params:
-        sd=SD
-    shell:"""
-{params.sd}/AppendCollapsedDupsList.py  {input.multi} {input.single} | \
-  awk 'NR<2{{print $0;next}}{{ print $0 | "sort -k4,4 -k5,5nr "}}'  | \
-bioawk -c hdr  '{{ if ($gene == curGene && $sim == -1) {{ $sim = maxIdent; }} else if ($sim == -1) {{ $sim = 1;}} print; if ($gene != curGene) {{ curGene = $gene; maxIdent=$identity; }} }}' | \
-  tr " " "\\t" > {output.both}
-"""
 
 rule GetUniqueGencodeUnresolvedDupGenesCN:
     input:
@@ -1437,22 +1419,6 @@ rule MapNamedSam:
 minimap2 -a -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mappedsam}
 """
         
-
-rule MapNamed:
-    input:
-        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
-    output:
-        mapped="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2",
-    params:
-        grid_opts=config["grid_large"],
-    resources:
-        load=16
-    shell:"""
-paftools.js sam2paf {input.mappedsam} >{output.mapped}
-"""
-
-
-
 rule MappedSamIdentity:
     input:
         mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
@@ -1465,71 +1431,59 @@ rule MappedSamIdentity:
  {params.sd}/hmcnc/HMM/samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
 """
 
+rule AddDepthCopyNumber:
+    input:
+        bed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
+        col="collapsed_duplications.bed.range4"
+    output:
+        cntab="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn.tab",
+        cn="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn",        
+    params:
+        grid_opts=config["grid_small"]
+    shell:"""
+bedtools intersect -loj -a {input.bed} -b {input.col} -f 1 | \
+   awk '{{ if ($19 == ".") {{ $19 = 2; }} print; }}' | \
+   tr " " "\\t" | bedtools groupby -g 1-4 -c 19 -o max | cut -f 5 > {output.cntab}
+   paste {input.bed} {output.cntab} > {output.cn}
+"""
+        
+
 rule MappedSamIdentityDups:
     input:
-        mappedsambed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
+        mappedsambed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn",
     output:
         mappedsambeddups="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
     params:
         sd=SD        
     shell:"""
-{params.sd}/SelectDuplicationsFromMM2.py {input.mappedsambed} bed > {output.mappedsambeddups}
+sort -k4,4 {input.mappedsambed} | \
+  {params.sd}/SelectDuplicationsFromMM2.py /dev/stdin > {output.mappedsambeddups}
 """
 
-rule RemoveOriginal:
+rule AnnotateOriginal:
     input:
         mappedsambeddups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
     output:
-        mappedsambeddupsorig="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.orig",
-        mappedsambeddupsorigAnnot="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig",
+        annot="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig",
     params:
         sd=SD
     shell:"""
-{params.sd}/RemoveOriginal.py {input.mappedsambeddups} > {output.mappedsambeddupsorig}
-{params.sd}/RemoveOriginal.py  {input.mappedsambeddups} annotate > {output.mappedsambeddupsorigAnnot}
+{params.sd}/AnnotateOriginal.py {input.mappedsambeddups} > {output.annot}
 """
     
-rule SelectDups:
-    input:
-        mm2="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2",
-    output:
-        dups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups",
-        dupsAnnotated="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.annotated",
-    params:
-        sd=SD
-    shell:"""
-{params.sd}/SelectDuplicationsFromMM2.py {input.mm2} paf > {output.dups}.with_orig
-{params.sd}/RemoveOriginalPAF.py {output.dups}.with_orig > {output.dups}
-{params.sd}/RemoveOriginalPAF.py {output.dups}.with_orig annotate > {output.dupsAnnotated}
-"""
-
-
-
-#rule SelectDupsOneIsoform:
-#    input:
-#        dups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups",
-#    output:
-#        iso="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform"
-#    params:
-#        sd=SD
-#    shell:"""
-#    cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | {params.sd}/SimplifyName.py | bedtools groupby -g 1,6,8,9 -c 1 -o first -full | cut -f 1-14 | sort > {output.iso}
-#"""
 rule SelectDupsOneIsoform:
     input:
- #       dups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.annotated",
-         dups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig" 
+        dups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig" 
     output:
-#        iso="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform"
         iso="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.one_isoform"
     params:
         sd=SD
     shell:"""
     cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
   {params.sd}/SimplifyName.py | \
-  sort -k1,1 -k6,6 -k8,8n | \
-  bedtools groupby -g 1,6,8,9 -c 1 -o first -full | \
-  cut -f 1-15 | sort -k4,4 -k1,1 -k2,2n > {output.iso}
+  sort -k4,4 -k2,2n | \
+  bedtools groupby -g 1-4 -c 1 -o first -full | \
+  cut -f 1-16 | sort -k4,4 -k1,1 -k2,2n > {output.iso}
 """
 
 rule CalcMeanCov:
@@ -1545,7 +1499,6 @@ zcat {input.bins} | awk '{{ s+=$4;n+=1; }} END {{ print s/n;}}' > {output.mc}
 
 rule GetGeneCoverage:
     input:
-#        iso="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform",
         iso="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.one_isoform",
         bins="hmm/cov_bins.bed.gz",
         mean="hmm/mean_cov.txt"
@@ -1570,23 +1523,7 @@ rule GetCombinedTable:
         sd=SD
     shell:"""
 echo -e "#chrom\\tstart\\tend\\tgene\\tsim\\tidentity\\tcopy" > {output.combined}
-paste {input.bed} {input.cov} | awk '{{ c=int($NF); if (c < 2) {{ c=2; }} print $1"\\t"$2"\\t"$3"\\t"$7"\\t"$(NF-3)"\\t"$(NF-2)"\\t"c-2;}}' >> {output.combined}
-"""
-
-rule AddCollapsedGenes:
-    input:
-        comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined",
-        coll="collapsed_dups_with_genes.bed"
-    output:
-        colm="collapsed_dups_with_genes.bed.not_multimapped",
-        colx="collapsed_dups_with_genes.bed.exclusive",                
-    params:
-        sd=SD
-    shell:"""
-{params.sd}/AppendCollapsedDupsList.py {input.comb} {input.coll} > {output.colm}
-bedtools intersect -v -a {output.colm} -b {input.comb} | \
-   sed "s/collapsed\///g" | \
-   awk '{{ $4-=2; if ($4 < 0) {{ $4 = 0; }} print; }}' > {output.colx}
+paste {input.bed} {input.cov} | awk '{{ c=int($NF); if (c < 2) {{ c=2; }} print $1"\\t"$2"\\t"$3"\\t"$7"\\t"$18"\\t"$19"\\t"int($16);}}' >> {output.combined}
 """
 
    
@@ -1681,26 +1618,26 @@ Rscript {params.sd}/PlotIdeogram.R {input.fai} {input.bed} {output.pdf}
 
 rule SortDups:
     input:
-        comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map",
+        comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined",
     output:
-        comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.sorted",
+        comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.sorted",
     shell:"""
 bedtools sort -header -i {input.comb} > {output.comb}
 """
 
 rule GetDepthOverDups:
     input:
-        comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.sorted",
+        comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.sorted",
         bins="hmm/cov_bins.bed.gz",
         avg="hmm/mean_cov.txt"
     output:
-        depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth",
+        depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
     shell:"""
 m=`cat hmm/mean_cov.txt`
 echo -e "gene\\tdepth" > {input.comb}.cn
 bedtools intersect -header -loj -a {input.comb} -b {input.bins} -sorted | \
-  awk '{{ print $0"\\tdc\\tds\\tdc\\tdv";}}' | \
-  bedtools groupby -g 1-4 -c 12 -o mean | \
+  awk '{{ if (NR==1) {{ print $0"\\tdc\\tds\\tdc\\tdv";}} else {{ print;}} }}' | \
+  bedtools groupby -g 1-4 -c 11 -o mean | \
   cut -f 4,5 | awk -v m=$m '{{ print $1"\\t"$2/m;}}' >> {input.comb}.cn
 paste {input.comb} <( cut -f 2 {input.comb}.cn ) | \
   awk 'NR<2{{print $0;next}}{{ print $0 | "sort -k4,4 "}}' > {output.depth}
@@ -1708,9 +1645,9 @@ paste {input.comb} <( cut -f 2 {input.comb}.cn ) | \
 
 rule FilterLowDepthDups:
     input:
-        depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth",
+        depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
     output:
-        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt",
+        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
     shell:"""
 cat {input.depth} | bioawk -c hdr '{{ if ($depth > 0.05) print;}}' > {output.depth_filt}
 
@@ -1718,33 +1655,30 @@ cat {input.depth} | bioawk -c hdr '{{ if ($depth > 0.05) print;}}' > {output.dep
 
 rule GeneCountFact:
     input:
-        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt",
+        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
     output:
-        fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.fact",
+        fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.fact",
     params:
         spec=config["species"]
     shell:"""
 cat {input.depth_filt} | \
-   bioawk -c hdr -v spec={params.spec} '{{ if (NR < 2) {{ print $0"\\tspecies"; next}} if ($resolved == "collapse") {{ for (i=1;i<$copy; i++) {{ print $0"\\t"spec;}} }} else {{ print $0"\\t"spec;}} }} ' | tr " " "\\t" > {output.fact}
+   bioawk -c hdr -v spec={params.spec} '{{ if (NR < 2) {{ print $0"\\tresolved\\tspecies"; next}} if ($identity == "Copy") {{ print $0"\\tmulti\\t"spec;}} \
+    for (i=1;i<$copy; i++) {{ print $0"\\tcollapse\\t"spec;}} }} ' | tr " " "\\t" > {output.fact}
 """
 
 
 rule GetFullGeneCountTable:
     input:
-        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt",
+        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
     output:
-        gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count",
-        gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.gene_count_multi_single",
-        asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
+        gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count",
+        gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count_multi_single",
     params:
         sd=SD
     shell:"""
-# 
-cat {input.depth_filt} | awk '{{ if (NR > 1) {{ $6=1;}} print; }}' | tr " " "\\t" | bedtools groupby -header -g 4 -c 6,6 -o mean,sum | awk '{{ if (NR==1) {{ print "gene\\tasmCount\\tcolCount";}} else print;}}' >  {output.asm_gene_count}
 
-{params.sd}/CountGenes.py  {input.depth_filt} > {output.gene_count_2column}
-
-grep -v Original {input.depth_filt} | awk '{{ if ($7 == 0) {{ $7=1;}} print;}}' | tr " " "\\t" | bedtools groupby -g 4 -c 7 -o sum | awk '{{ if ($2 >= 1) {{ print;}} }}' > {output.gene_count}
+cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($7/2)-1; if (cn < 0) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column}
+cat {output.gene_count_2column} | awk '{{ if (NR == 1) {{ print "gene\\tcopies";}} else {{  print $1"\\t"$2+$3;}} }}' > {output.gene_count}
 """
 
 rule cramBam:
@@ -1782,7 +1716,6 @@ rule RemoveBams:
         ss="sedef_out/final.sorted.bed",
         aln=expand("aligned/{b}.bam", b=bamFiles.keys()),
         Raln=expand("ref_aligned/{b}.bam", b=bamFiles.keys()),        
-        asm_gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.and_unique_map.depth.filt.asm_gene_count",
     output:
         d="done.done",
     shell:"""

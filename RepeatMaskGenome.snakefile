@@ -7,7 +7,8 @@ import os.path
 # Config
 configfile: "sd_analysis.json"
 
-
+if "asm" not in config and "assembly" in config:
+    config["asm"] = config["assembly"]
 
 asmFai=config["asm"] + ".fai"
 asmFaiFile=open(asmFai)
