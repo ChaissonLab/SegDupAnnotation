@@ -1428,7 +1428,7 @@ rule MappedSamIdentity:
         grid_opts=config["grid_small"],
         sd=SD,
     shell:"""
- {params.sd}/hmcnc/HMM/samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
+ {params.sd}/hmcnc/src/samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
 """
 
 rule AddDepthCopyNumber:
