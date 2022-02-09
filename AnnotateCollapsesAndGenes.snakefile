@@ -52,9 +52,6 @@ rule all:
     input:
         fai=assembly+".fai",
         bam=config["bam"],
-        sedef="sedef_out/final.bed",
-        sedef_sorted="sedef_out/final.sorted.bed",
-        filt="sedef_out/all/final.sorted.bed.final.filt",        
         mappedsam="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
         mappedsambed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
         mappedsambeddups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
@@ -64,14 +61,9 @@ rule all:
         comb_with_depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
         fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.fact",
         gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count",
-        gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count_multi_single",            
-        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
+        gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count_multi_single",
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
-        sedef_high_uniq="sedef_out/all/final.sorted.bed.uniq.high",        
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
-# CIRCOS targets
-#        links="circos/genes_in_resolved_dups.links.tsv",
-#        names="circos/genes_in_resolved_dups.links.names.tsv",
         bins="hmm/cov_bins.bed.gz",
         mean="hmm/mean_cov.txt",        
         cnvcf="hmm/copy_number.vcf",
@@ -233,176 +225,6 @@ rule RefIndexBam:
 samtools index -@2 {input.bam}
 """
 
-
-rule MakeWMDB:
-    input:
-        asm=assembly
-    output:
-        wm_db="wmdb"
-    params:
-        grid_opts=config["grid_medium"]
-    resources:
-        load=2
-    shell:"""
-windowmasker -mk_counts -in {input.asm} -out {output.wm_db}  || true
-"""
-
-rule MakeWMIntv:
-    input:
-        wm_db="wmdb",
-        asm=assembly
-    output:
-        intv="wm_mask_intervals"
-    params:
-        grid_opts=config["grid_large"]
-    resources:
-        load=2
-    shell:"""
-windowmasker -ustat {input.wm_db} -in {input.asm} -out {output.intv}  || true
-"""
-
-rule MakeWMBed:
-    input:
-        intv="wm_mask_intervals"
-    output:
-        bed="wm_mask_intervals.bed"
-    params:
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-cat {input.intv} | awk '{{ if (substr($1,0,1) == ">") {{ name=substr($1,1); }} else {{ if ($3-$1 > 100) print name"\\t"$1"\\t"$3;}} }}' | tr -d ">" > {output.bed}
-"""
-
-rule MaskFile:
-    input:
-        bed="wm_mask_intervals.bed",
-        asm=assembly
-    output:
-        masked="assembly.masked.fasta"
-    params:
-        grid_opts=config["grid_medium"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-{params.sd}/bemask {input.asm} {input.bed} {output.masked}
-"""
-
-#
-# Run repeat masker on the assembly. This will be combined with the
-# windowmasker to generate a masked genome.
-#
-
-rule SplitGenome:
-    input:
-        asm="assembly.orig.fasta"
-    output:
-        split=dynamic("split/to_mask.{region}.fasta")
-    params:
-        grid_opts=config["grid_medium"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-mkdir -p split
-{params.sd}/DivideFasta.py {input.asm} split/to_mask
-"""
-
-
-rule MaskFasta:
-    input:
-        part="split/to_mask.{region}.fasta"
-    output:
-        mask="split/to_mask.{region}.fasta.masked"
-    params:
-        grid_opts=config["grid_medium"],
-        repeatLibrary=config["repeat_library"],
-        tmpdir=tempp,
-    resources:
-        load=8
-    shell:"""
-TEMP="$TMPDIR/$$_$RANDOM/"
-mkdir -p $TEMP
-cp \"{input.part}\" \"$TEMP/to_mask.{wildcards.region}.fasta\" && \
-pushd $TEMP &&  \
-RepeatMasker {params.repeatLibrary} -pa 8  -s -xsmall \"to_mask.{wildcards.region}.fasta\" && \
-popd && \
-cp $TEMP/to_mask.\"{wildcards.region}\".fasta.* split/ || true
-if [ ! -e split/to_mask.\"{wildcards.region}\".fasta.masked ]; then
-  cp split/to_mask.\"{wildcards.region}\".fasta split/to_mask.\"{wildcards.region}\".fasta.masked
-fi
-rm -rf $TEMP
-"""
-
-        
-rule MakeToCombine:
-    input:
-        mask=dynamic("split/to_mask.{region}.fasta.masked"),
-    output:
-        tc="to_combine.txt"
-    params:
-        grid_opts=config["grid_small"],
-        sd=SD
-    resources:
-        load=1
-    run:
-        f=open(output.tc,'w')
-        f.write("\n".join(input.mask) + "\n")
-        f.close()
-
-    
-rule CombineMasked:
-    input:
-        asm=assembly
-    output: 
-        masked="assembly.repeat_masked.fasta",
-        maskedout="assembly.repeat_masked.fasta.out",
-    params:
-        grid_opts=config["grid_medium"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-snakemake -p -s {params.sd}/RepeatMaskGenome.snakefile -j 20 --cluster "{params.grid_opts}" --nolock
-"""
-
-
-#
-#  The final masked genome combines wm and repeatmasker
-#
-
-if config["repeat_library"] != "pre_masked":
-   
-    rule UnionMasked:
-        input:
-            orig="assembly.orig.fasta",
-            wm="assembly.masked.fasta",
-            rm="assembly.repeat_masked.fasta"
-        output:
-            comb="assembly.union_masked.fasta"
-        params:
-            sd=SD,
-            grid_opts=config["grid_large"]
-        resources:
-            load=1
-        shell:"""
-        {params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
-        samtools faidx {output.comb}
-        """
-else:
-    rule UnionMasked1:
-        input:
-            orig="assembly.orig.fasta"
-        output:
-            comb="assembly.union_masked.fasta"
-        shell:"""
-ln -sf {input.orig} {output.comb}
-samtools faidx {output.comb}
-"""
-#
-# Use excess depth to count duplications
-#
 
 rule RunRefDepthHmm:
     input:
@@ -1466,7 +1288,8 @@ rule AnnotateOriginal:
     output:
         annot="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig",
     params:
-        sd=SD
+        sd=SD,
+        grid_opts=config["grid_small"]
     shell:"""
 {params.sd}/AnnotateOriginal.py {input.mappedsambeddups} > {output.annot}
 """
@@ -1621,6 +1444,8 @@ rule SortDups:
         comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined",
     output:
         comb="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.sorted",
+    params:
+        grid_opts=config["grid_small"]
     shell:"""
 bedtools sort -header -i {input.comb} > {output.comb}
 """
@@ -1632,6 +1457,8 @@ rule GetDepthOverDups:
         avg="hmm/mean_cov.txt"
     output:
         depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
+    params:
+        grid_opts=config["grid_small"]
     shell:"""
 m=`cat hmm/mean_cov.txt`
 echo -e "gene\\tdepth" > {input.comb}.cn
@@ -1648,6 +1475,8 @@ rule FilterLowDepthDups:
         depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
     output:
         depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
+    params:
+        grid_opts=config["grid_small"]
     shell:"""
 cat {input.depth} | bioawk -c hdr '{{ if ($depth > 0.05) print;}}' > {output.depth_filt}
 
@@ -1659,7 +1488,8 @@ rule GeneCountFact:
     output:
         fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.fact",
     params:
-        spec=config["species"]
+        spec=config["species"],
+        grid_opts=config["grid_small"]
     shell:"""
 cat {input.depth_filt} | \
    bioawk -c hdr -v spec={params.spec} '{{ if (NR < 2) {{ print $0"\\tresolved\\tspecies"; next}} if ($identity == "Copy") {{ print $0"\\tmulti\\t"spec;}} \
@@ -1674,7 +1504,8 @@ rule GetFullGeneCountTable:
         gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count",
         gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count_multi_single",
     params:
-        sd=SD
+        sd=SD,
+        grid_opts=config["grid_small"]
     shell:"""
 
 cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($7/2)-1; if (cn < 0) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column}
