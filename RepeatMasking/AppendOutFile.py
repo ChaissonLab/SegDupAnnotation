@@ -37,7 +37,7 @@ for other in sys.argv[3:]:
                 print(line)
                 print(other)
                 sys.exit(1)
-            newLine="{:>5} {:>7.1} {:>5.1} {:>5.1}  {} {:>9} {:>8} {:>10} {:1} {:8} {:>23} {:>10} {:>7} {:>8} {:>10d}".format(vals[0],vals[1],vals[2],vals[3],
+            newLine="{:>5} {:>7.1f} {:>5.1f} {:>5.1f}  {} {:>9} {:>8} {:>10} {:1} {:8} {:>23} {:>10} {:>7} {:>8} {:>10d}".format(int(vals[0]), float(vals[1]), float(vals[2]), float(vals[3]),
                                                                                                                vals[4], vals[5], vals[6], vals[7], vals[8],
                                                                                                                vals[9], vals[10], vals[11], vals[12],
                                                                                                                vals[13], index)
