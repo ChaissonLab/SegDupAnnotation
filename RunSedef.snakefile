@@ -79,61 +79,61 @@ def GetBam(f):
 # Map individual bams separately
 #
 
-rule MakeWMDB:
-    input:
-        asm=assembly
-    output:
-        wm_db="wmdb"
-    params:
-        grid_opts=config["grid_medium"]
-    resources:
-        load=2
-    shell:"""
-windowmasker -mk_counts -in {input.asm} -out {output.wm_db}  || true
-"""
-
-rule MakeWMIntv:
-    input:
-        wm_db="wmdb",
-        asm=assembly
-    output:
-        intv="wm_mask_intervals"
-    params:
-        grid_opts=config["grid_large"]
-    resources:
-        load=2
-    shell:"""
-windowmasker -ustat {input.wm_db} -in {input.asm} -out {output.intv}  || true
-"""
-
-rule MakeWMBed:
-    input:
-        intv="wm_mask_intervals"
-    output:
-        bed="wm_mask_intervals.bed"
-    params:
-        grid_opts=config["grid_small"]
-    resources:
-        load=1
-    shell:"""
-cat {input.intv} | awk '{{ if (substr($1,0,1) == ">") {{ name=substr($1,1); }} else {{ if ($3-$1 > 100) print name"\\t"$1"\\t"$3;}} }}' | tr -d ">" > {output.bed}
-"""
-
-rule MaskFile:
-    input:
-        bed="wm_mask_intervals.bed",
-        asm=assembly
-    output:
-        masked="assembly.masked.fasta"
-    params:
-        grid_opts=config["grid_medium"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-{params.sd}/bemask {input.asm} {input.bed} {output.masked}
-"""
-
+#rule MakeWMDB:
+#    input:
+#        asm=assembly
+#    output:
+#        wm_db="wmdb"
+#    params:
+#        grid_opts=config["grid_medium"]
+#    resources:
+#        load=2
+#    shell:"""
+#windowmasker -mk_counts -in {input.asm} -out {output.wm_db}  || true
+#"""
+#
+#rule MakeWMIntv:
+#    input:
+#        wm_db="wmdb",
+#        asm=assembly
+#    output:
+#        intv="wm_mask_intervals"
+#    params:
+#        grid_opts=config["grid_large"]
+#    resources:
+#        load=2
+#    shell:"""
+#windowmasker -ustat {input.wm_db} -in {input.asm} -out {output.intv}  || true
+#"""
+#
+#rule MakeWMBed:
+#    input:
+#        intv="wm_mask_intervals"
+#    output:
+#        bed="wm_mask_intervals.bed"
+#    params:
+#        grid_opts=config["grid_small"]
+#    resources:
+#        load=1
+#    shell:"""
+#cat {input.intv} | awk '{{ if (substr($1,0,1) == ">") {{ name=substr($1,1); }} else {{ if ($3-$1 > 100) print name"\\t"$1"\\t"$3;}} }}' | tr -d ">" > {output.bed}
+#"""
+#
+#rule MaskFile:
+#    input:
+#        bed="wm_mask_intervals.bed",
+#        asm=assembly
+#    output:
+#        masked="assembly.masked.fasta"
+#    params:
+#        grid_opts=config["grid_medium"],
+#        sd=SD
+#    resources:
+#        load=1
+#    shell:"""
+#{params.sd}/bemask {input.asm} {input.bed} {output.masked}
+#"""
+#
 #
 # Run repeat masker on the assembly. This will be combined with the
 # windowmasker to generate a masked genome.
@@ -145,21 +145,21 @@ rule MaskFile:
 #  The final masked genome combines wm and repeatmasker
 #
 
-rule UnionMasked:
-    input:
-        orig="assembly.orig.fasta",
-        wm="assembly.masked.fasta",
-    output:
-        comb="assembly.union_masked.fasta"
-    params:
-        sd=SD,
-        grid_opts=config["grid_large"]
-    resources:
-        load=1
-    shell:"""
-    {params.sd}/comask {output.comb} {input.orig} {input.wm}
-    samtools faidx {output.comb}
-"""
+#rule UnionMasked:
+#    input:
+#        orig="assembly.orig.fasta",
+#        wm="assembly.masked.fasta",
+#    output:
+#        comb="assembly.union_masked.fasta"
+#    params:
+#        sd=SD,
+#        grid_opts=config["grid_large"]
+#    resources:
+#        load=1
+#    shell:"""
+#    {params.sd}/comask {output.comb} {input.orig} {input.wm}
+#    samtools faidx {output.comb}
+#"""
 
 #
 # The following rules do the initial resolved repeat detection with
@@ -171,14 +171,15 @@ rule UnionMasked:
 #
 rule RunSedef:
     input:
-        asm="assembly.union_masked.fasta"
+#        asm="assembly.union_masked.fasta"
     output:
         done="sedef_out/final.bed"
     params:
+        asm="assembly.union_masked.fasta",        
         grid_opts=config["grid_sedef"],
         sd=SD
     resources:
-        load=12
+        load=8
     shell:"""
 
 module load gcc/8.3.0
@@ -186,7 +187,7 @@ module load time
 module load parallel
 export PATH=$PATH:{params.sd}/sedef
 
-{params.sd}/sedef.sh  {input.asm} -j 12
+{params.sd}/sedef.sh  {params.asm} -j 8
 """
 #
 # Sort by chrom and start, fixing a bug in sedef output that misses
@@ -754,20 +755,20 @@ cat {input.coll} {input.res} | sort > {output.summary}
 #
 
 
-rule CountMaskedAsmp:
-    input:
-        asm="{assembly}"
-    output:
-        countMasked="{assembly}.count_masked"
-    params:
-        grid_opts=config["grid_small"],
-        sd=SD
-    resources:
-        load=1
-    shell:"""
-cat {input.asm} | {params.sd}/nl > {output.countMasked}
-"""
-
+#rule CountMaskedAsmp:
+#    input:
+#        asm="{assembly}"
+#    output:
+#        countMasked="{assembly}.count_masked"
+#    params:
+#        grid_opts=config["grid_small"],
+#        sd=SD
+#    resources:
+#        load=1
+#    shell:"""
+#cat {input.asm} | {params.sd}/nl > {output.countMasked}
+#"""
+#
 
 
 

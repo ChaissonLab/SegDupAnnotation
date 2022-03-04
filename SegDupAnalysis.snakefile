@@ -1479,12 +1479,19 @@ rule SelectDupsOneIsoform:
     params:
         sd=SD
     shell:"""
-    cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
+cut -f 4 {input.dups} |   {params.sd}/SimplifyName.py | sort | uniq > {input.dups}.genes
+for gene in `cat {input.dups}.genes`; do
+  grep "|$gene|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse ; \
+done |
   {params.sd}/SimplifyName.py | \
+    {params.sd}/FixOriginalCopy.py | \
   sort -k4,4 -k2,2n | \
   bedtools groupby -g 1-4 -c 1 -o first -full | \
   cut -f 1-16 | sort -k4,4 -k1,1 -k2,2n > {output.iso}
 """
+##    cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
+#  {params.sd}/SimplifyName.py | \
+    
 
 rule CalcMeanCov:
     input:
