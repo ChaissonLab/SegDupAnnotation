@@ -10,7 +10,9 @@ configfile: "sd_analysis.json"
 if "asm" not in config and "assembly" in config:
     config["asm"] = config["assembly"]
 
-asmFai=config["asm"] + ".fai"
+assembly="assembly.orig.fasta"
+asmFai="assembly.orig.fasta.fai"
+#asmFai=config["asm"] + ".fai"
 asmFaiFile=open(asmFai)
 contigs=[l.split()[0] for l in asmFaiFile]
 strIdx=[str(i) for i in range(0,len(contigs))]
@@ -27,7 +29,7 @@ rule all:
 
 rule SplitContig:
     input:
-        asm=config["asm"]
+        asm=assembly
     output:
         contig="split/to_mask.{index}.fasta",
     params:
@@ -78,26 +80,31 @@ rule SpecialMaskContig:
         tmpdir=tempDir,
         sd=SD
     shell:"""
-mkdir -p t2t
-TEMP="$TMPDIR/$$_$RANDOM/"
-mkdir -p $TEMP
-# 
-# Copy input file to temp dir that should have fast IO
-#
-{params.sd}/hardmask {input.mask} $TEMP/to_mask.{wildcards.index}.fasta && \
-pushd $TEMP &&  \
-RepeatMasker -nolow -libdir /home1/mchaisso/miniconda3/share/RepeatMasker/Libraries/Appended -species human -pa 8 -s -xsmall \"to_mask.{wildcards.index}.fasta\" && \
-popd && \
+if [ {params.repeatLibrary} != "na" ]
+then
+  mkdir -p t2t
+  TEMP="$TMPDIR/$$_$RANDOM/"
+  mkdir -p $TEMP
+  # 
+  # Copy input file to temp dir that should have fast IO
+  #
+  {params.sd}/hardmask {input.mask} $TEMP/to_mask.{wildcards.index}.fasta && \
+  pushd $TEMP &&  \
+  RepeatMasker -nolow -libdir /home1/mchaisso/miniconda3/share/RepeatMasker/Libraries/Appended -species human -pa 8 -s -xsmall \"to_mask.{wildcards.index}.fasta\" && \
+  popd && \
 
-if [ ! -e $TEMP/to_mask.\"{wildcards.index}\".fasta.masked ]; then
-  ls -l masked/to_mask.\"{wildcards.index}\".fasta.masked
-  cp masked/to_mask.\"{wildcards.index}\".fasta.masked t2t/to_mask.\"{wildcards.index}\".fasta.masked
-  head -3 masked/to_mask.\"{wildcards.index}\".fasta.out > t2t/to_mask.\"{wildcards.index}\".fasta.out
+  if [ ! -e $TEMP/to_mask.\"{wildcards.index}\".fasta.masked ]; then
+    ls -l masked/to_mask.\"{wildcards.index}\".fasta.masked
+    cp masked/to_mask.\"{wildcards.index}\".fasta.masked t2t/to_mask.\"{wildcards.index}\".fasta.masked
+    head -3 masked/to_mask.\"{wildcards.index}\".fasta.out > t2t/to_mask.\"{wildcards.index}\".fasta.out
+  else
+    cp $TEMP/to_mask.\"{wildcards.index}\".fasta.* t2t/ || true
+  fi
+  rm -rf $TEMP
 else
-  cp $TEMP/to_mask.\"{wildcards.index}\".fasta.* t2t/ || true
+  echo "*** rule SpecialMaskContig made no change (skipped) ***" > t2t/to_mask.\"{wildcards.index}\".fasta.out
+  cp {input.mask} t2t/to_mask.\"{wildcards.index}\".fasta.masked >> t2t/to_mask.\"{wildcards.index}\".fasta.out || true
 fi
-rm -rf $TEMP
-
 """
 
 rule MergeMaskerRuns:
