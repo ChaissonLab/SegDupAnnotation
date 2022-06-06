@@ -373,59 +373,59 @@ snakemake -p -s {params.sd}/RepeatMaskGenome.snakefile -j 20 --cluster "{params.
 #  The final masked genome combines wm and repeatmasker
 #
 
-if config["repeat_library"] != "pre_masked":
-   
-    rule UnionMasked:
-        input:
-            orig="assembly.orig.fasta",
-            wm="assembly.masked.fasta",
-            rm="assembly.repeat_masked.fasta"
-        output:
-            comb="assembly.union_masked.fasta"
-        params:
-            sd=SD,
-            grid_opts=config["grid_large"]
-        resources:
-            load=1
-        shell:"""
-        {params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
-        samtools faidx {output.comb}
-        """
-else:
-    rule UnionMasked1:
-        input:
-            orig="assembly.orig.fasta"
-        output:
-            comb="assembly.union_masked.fasta"
-        shell:"""
-ln -sf {input.orig} {output.comb}
-samtools faidx {output.comb}
-"""
+#if config["repeat_library"] != "pre_masked":
+#   
+#    rule UnionMasked:
+#        input:
+#            orig="assembly.orig.fasta",
+#            wm="assembly.masked.fasta",
+#            rm="assembly.repeat_masked.fasta"
+#        output:
+#            comb="assembly.union_masked.fasta"
+#        params:
+#            sd=SD,
+#            grid_opts=config["grid_large"]
+#        resources:
+#            load=1
+#        shell:"""
+#        {params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
+#        samtools faidx {output.comb}
+#        """
+#else:
+#    rule UnionMasked1:
+#        input:
+#            orig="assembly.orig.fasta"
+#        output:
+#            comb="assembly.union_masked.fasta"
+#        shell:"""
+#ln -sf {input.orig} {output.comb}
+#samtools faidx {output.comb}
+#"""
+##
+## Use excess depth to count duplications
+##
 #
-# Use excess depth to count duplications
+#rule RunRefDepthHmm:
+#    input:
+#        v="assembly.bam",
+#        bai="assembly.bam.bai",
+#    output:
+#        vcf="hmm/copy_number.vcf",
+#        cov="hmm/cov_bins.bed.gz",
+#        snvs="hmm/snvs.tsv"
+#    params:
+#        grid_opts=config["grid_large"],
+#        sd=SD,
+#        mp=config['mapping_params'],
+#    resources:
+#        load=16
+#    shell:"""
+#mkdir -p hmm
+#{params.sd}/hmcnc/src/hmmcnc assembly.orig.fasta -a {input.v} -B hmm/cov_bins.bed -S {output.snvs} -o {output.vcf}
+#bedtools sort -i hmm/cov_bins.bed | bgzip -c > hmm/cov_bins.bed.gz
+#tabix hmm/cov_bins.bed.gz
+#"""
 #
-
-rule RunRefDepthHmm:
-    input:
-        v="assembly.bam",
-        bai="assembly.bam.bai",
-    output:
-        vcf="hmm/copy_number.vcf",
-        cov="hmm/cov_bins.bed.gz",
-        snvs="hmm/snvs.tsv"
-    params:
-        grid_opts=config["grid_large"],
-        sd=SD,
-        mp=config['mapping_params'],
-    resources:
-        load=16
-    shell:"""
-mkdir -p hmm
-{params.sd}/hmcnc/src/hmmcnc assembly.orig.fasta -a {input.v} -B hmm/cov_bins.bed -S {output.snvs} -o {output.vcf}
-bedtools sort -i hmm/cov_bins.bed | bgzip -c > hmm/cov_bins.bed.gz
-tabix hmm/cov_bins.bed.gz
-"""
-
 rule ConvertHMMCopyNumberToCollapsedDuplications:
     input:
         bed="hmm/copy_number.bed.gz"
@@ -470,14 +470,14 @@ cat {output.rng} | awk '{{ if ($(NF-2) >= 3) print;}}' > {output.rng4}
 rule GetCollapsedMask:
     input:
         col="collapsed_duplications.bed.range4",
-        asm="assembly.union_masked.fasta"
     output:
         colmask="collapsed_duplications.split.bed.frac_masked",
         not_masked="collapsed_duplications.split.bed.not_masked"
     params:
-        sd=SD
+        sd=SD,
+        asm="assembly.union_masked.fasta"
     shell:"""
-bedtools getfasta -fi {input.asm} -bed {input.col} | {params.sd}/nl > {output.colmask}
+bedtools getfasta -fi {params.asm} -bed {input.col} | {params.sd}/nl > {output.colmask}
 paste {input.col} {output.colmask} | awk '{{ if ($8 < 0.9) print;}}' > {output.not_masked}
 """
         
@@ -790,7 +790,7 @@ samtools view {input.realignedOneIsoform} -o {input.realignedOneIsoform}.bam
 bedtools bamtobed -bed12 -i {input.realignedOneIsoform}.bam | \
   {params.sd}/SimplifyNameInBed12.py | \
   sort -k4,4 -k1,1 -k2,2n | \
-  bedtools groupby -g 1-3 -c 2 -o first -full | {params.sd}/RemoveOverlappingGenes.py >  {output.b12}
+  bedtools groupby -g 1-3 -c 2 -o first -full | {params.sd}/RemoveAnyOverlappingGenes.py >  {output.b12}
 
 
 grep -v "^@" {input.realignedOneIsoform} | awk '{{ for (i=1; i <= NF; i++) {{ if (substr($i,0,3) == "GR:") {{ print substr($i,6);}} }} }}' > groups.txt
@@ -1417,7 +1417,7 @@ rule MapNamedSam:
     resources:
         load=16
     shell:"""
-minimap2 -a -F 500 -m 200 --dual=yes -N 50 -t {resources.load} {input.asm} {input.fa}  > {output.mappedsam}
+minimap2 -a -N 20 -p 0.5 -t {resources.load} {input.asm} {input.fa}  > {output.mappedsam}
 """
         
 rule MappedSamIdentity:
@@ -1448,7 +1448,9 @@ bedtools intersect -loj -a {input.bed} -b {input.col} -f 1 | \
    paste {input.bed} {output.cntab} > {output.cn}
 """
         
-
+#
+# This selects genes that either have multiple copies or overlap a collapse.
+#
 rule MappedSamIdentityDups:
     input:
         mappedsambed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn",
@@ -1483,13 +1485,13 @@ rule SelectDupsOneIsoform:
     shell:"""
 cut -f 4 {input.dups} |   {params.sd}/SimplifyName.py | sort | uniq > {input.dups}.genes
 for gene in `cat {input.dups}.genes`; do
-  grep "|$gene|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse ; \
+  grep "|$gene|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse ; \
 done |
   {params.sd}/SimplifyName.py | \
     {params.sd}/FixOriginalCopy.py | \
   sort -k4,4 -k2,2n | \
   bedtools groupby -g 1-4 -c 1 -o first -full | \
-  cut -f 1-16 | sort -k4,4 -k1,1 -k2,2n > {output.iso}
+  cut -f 1-16 | sort -k4,4 -k1,1 -k2,2n | bedtools sort  |  {params.sd}/RemoveAnyOverlappingGenes.py > {output.iso}
 """
 ##    cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
 #  {params.sd}/SimplifyName.py | \
@@ -1532,10 +1534,10 @@ rule GetCombinedTable:
         sd=SD
     shell:"""
 echo -e "#chrom\\tstart\\tend\\tgene\\tsim\\tidentity\\tcopy" > {output.combined}
-paste {input.bed} {input.cov} | awk '{{ c=int($NF); if (c < 2) {{ c=2; }} print $1"\\t"$2"\\t"$3"\\t"$7"\\t"$18"\\t"$19"\\t"int($16);}}' >> {output.combined}
+paste {input.bed} {input.cov} | awk '{{ c=int($NF); if (c < 2) {{ c=2; }} print $1"\\t"$2"\\t"$3"\\t"$7"\\t"$18"\\t"$19"\\t"c;}}' >> {output.combined}
 """
 
-   
+
 rule MinimapGeneModelBed:
     input:
         bam="{data}.mapped.bam"
@@ -1686,7 +1688,7 @@ rule GetFullGeneCountTable:
         sd=SD
     shell:"""
 
-cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($7/2)-1; if (cn < 0) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column}
+cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($7)-1; if (cn < 0) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column}
 cat {output.gene_count_2column} | awk '{{ if (NR == 1) {{ print "gene\\tcopies";}} else {{  print $1"\\t"$2+$3;}} }}' > {output.gene_count}
 """
 

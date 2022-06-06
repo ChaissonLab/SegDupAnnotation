@@ -22,7 +22,8 @@ def FractionOverlap(alnsA, alnsB):
 
 
 prevGene=None
-lines = sys.stdin.readlines()
+inFile=sys.stdin
+lines = inFile.readlines()
 
 i=0
 j=0
@@ -30,7 +31,7 @@ keep=[True] * len(lines)
 while i < len(lines):
     vals=lines[i].split()
     curGene=vals[3]
-    j=i+1    
+    j=i+1
     while (j < len(lines)):
         nextVals=lines[j].split()
         nextGene=nextVals[3]
