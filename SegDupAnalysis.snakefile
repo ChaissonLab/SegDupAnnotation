@@ -373,59 +373,59 @@ snakemake -p -s {params.sd}/RepeatMaskGenome.snakefile -j 20 --cluster "{params.
 #  The final masked genome combines wm and repeatmasker
 #
 
-#if config["repeat_library"] != "pre_masked":
-#   
-#    rule UnionMasked:
-#        input:
-#            orig="assembly.orig.fasta",
-#            wm="assembly.masked.fasta",
-#            rm="assembly.repeat_masked.fasta"
-#        output:
-#            comb="assembly.union_masked.fasta"
-#        params:
-#            sd=SD,
-#            grid_opts=config["grid_large"]
-#        resources:
-#            load=1
-#        shell:"""
-#        {params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
-#        samtools faidx {output.comb}
-#        """
-#else:
-#    rule UnionMasked1:
-#        input:
-#            orig="assembly.orig.fasta"
-#        output:
-#            comb="assembly.union_masked.fasta"
-#        shell:"""
-#ln -sf {input.orig} {output.comb}
-#samtools faidx {output.comb}
-#"""
-##
-## Use excess depth to count duplications
-##
+if config["repeat_library"] != "pre_masked":
+  
+   rule UnionMasked:
+       input:
+           orig="assembly.orig.fasta",
+           wm="assembly.masked.fasta",
+           rm="assembly.repeat_masked.fasta"
+       output:
+           comb="assembly.union_masked.fasta"
+       params:
+           sd=SD,
+           grid_opts=config["grid_large"]
+       resources:
+           load=1
+       shell:"""
+       {params.sd}/comask {output.comb} {input.orig} {input.wm} {input.rm}
+       samtools faidx {output.comb}
+       """
+else:
+   rule UnionMasked1:
+       input:
+           orig="assembly.orig.fasta"
+       output:
+           comb="assembly.union_masked.fasta"
+       shell:"""
+ln -sf {input.orig} {output.comb}
+samtools faidx {output.comb}
+"""
 #
-#rule RunRefDepthHmm:
-#    input:
-#        v="assembly.bam",
-#        bai="assembly.bam.bai",
-#    output:
-#        vcf="hmm/copy_number.vcf",
-#        cov="hmm/cov_bins.bed.gz",
-#        snvs="hmm/snvs.tsv"
-#    params:
-#        grid_opts=config["grid_large"],
-#        sd=SD,
-#        mp=config['mapping_params'],
-#    resources:
-#        load=16
-#    shell:"""
-#mkdir -p hmm
-#{params.sd}/hmcnc/src/hmmcnc assembly.orig.fasta -a {input.v} -B hmm/cov_bins.bed -S {output.snvs} -o {output.vcf}
-#bedtools sort -i hmm/cov_bins.bed | bgzip -c > hmm/cov_bins.bed.gz
-#tabix hmm/cov_bins.bed.gz
-#"""
+# Use excess depth to count duplications
 #
+
+rule RunRefDepthHmm:
+   input:
+       v="assembly.bam",
+       bai="assembly.bam.bai",
+   output:
+       vcf="hmm/copy_number.vcf",
+       cov="hmm/cov_bins.bed.gz",
+       snvs="hmm/snvs.tsv"
+   params:
+       grid_opts=config["grid_large"],
+       sd=SD,
+       mp=config['mapping_params'],
+   resources:
+       load=16
+   shell:"""
+mkdir -p hmm
+{params.sd}/hmcnc/src/hmmcnc assembly.orig.fasta -a {input.v} -B hmm/cov_bins.bed -S {output.snvs} -o {output.vcf}
+bedtools sort -i hmm/cov_bins.bed | bgzip -c > hmm/cov_bins.bed.gz
+tabix hmm/cov_bins.bed.gz
+"""
+
 rule ConvertHMMCopyNumberToCollapsedDuplications:
     input:
         bed="hmm/copy_number.bed.gz"
@@ -1483,9 +1483,9 @@ rule SelectDupsOneIsoform:
     params:
         sd=SD
     shell:"""
-cut -f 4 {input.dups} |   {params.sd}/SimplifyName.py | sort | uniq > {input.dups}.genes
+cut -f 4 {input.dups} |   {params.sd}/SimplifyName.py | cut -f1 -d "|" | sort | uniq > {input.dups}.genes
 for gene in `cat {input.dups}.genes`; do
-  grep "|$gene|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse ; \
+  grep "$gene|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse ; \
 done |
   {params.sd}/SimplifyName.py | \
     {params.sd}/FixOriginalCopy.py | \
