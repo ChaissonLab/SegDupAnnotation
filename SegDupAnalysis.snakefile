@@ -2,11 +2,12 @@ import os
 import tempfile
 import subprocess
 import os.path
+from snakemake.utils import validate
 
 
 # Config
 configfile: "sd_analysis.json"
-
+validate(config, os.path.dirname(workflow.snakefile) + "/config.schema.json")
 
 
 
@@ -676,7 +677,7 @@ rule GetCN:
     input:
         vcf="hmm/copy_number.vcf"
     output:
-        bed="hmm/copy_number.bed.gz",
+        bed="hmm/copy_number.bed.gz", # output format: chrom, start, end, copy number
     params:
         sd=SD        
     shell:"""

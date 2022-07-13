@@ -1,0 +1,139 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "SegDupAnnotation Configurations",
+    "description": "Config file for SegDupAnnotation used to annotate segmental duplications in a given species.",
+    "type": "object",
+    "properties": {
+        "species": {
+            "description": "The name, code, or identifier for the species or individual being processed.",
+            "type": "string"
+        },
+        "reads_bam": {
+            "description": "List of paths to read files in bam format. Must all be either CCS or CLR (mixing of PacBio read types is not supported).",
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "examples": [ [
+                "/scratch1/krabbani/data/raw_bTaeGut2/m54306U_210519_154448.hifi_reads.bam",
+                "/scratch1/krabbani/data/raw_bTaeGut2/m54306U_210521_004211.hifi_reads.bam"
+            ] ]
+        },
+        "bam": {
+            "description": "Name to give file after aligning and merging 'reads_bam' files.",
+            "type": "string",
+            "examples": [ "assembly.bam" ]
+        },
+        "temp": {
+            "description": "Filepath to an existing directory for temporary files.",
+            "type": "string",
+            "examples": [ "/scratch2/krabbani/sda_tmp/tmp_bTaeGut2_finch" ]
+        },
+        "asm": {
+            "description": "Filepath to assembly of this species/individual's genome in fasta format.",
+            "type": "string",
+            "examples": [ "/scratch1/krabbani/data/raw_bTaeGut2/bTaeGut2.hic.hap1.s2.fasta" ]
+        },
+        "repeat_library": {
+            "description": "Add option to specify species or clade used in RepeatMasker.",
+            "type": "string",
+            "examples": [
+                "-species 'zebra finch'",
+                "-species chicken",
+                "-species mammal"
+            ]
+        },
+        "grid_large": {
+            "description": "Generic SLURM paramaters for running certain rules that are computationally intensive.",
+            "type": "string",
+            "examples": [ "sbatch -c 16 --mem=48G --time=24:00:00 --partition=qcb --account=mchaisso_100 " ]
+        },
+        "grid_medium": {
+            "description": "Generic SLURM paramaters for running certain rules that are computationally mild.",
+            "type": "string",
+            "examples": [ "sbatch -c 4 --mem=6G --time=24:00:00 --partition=qcb --account=mchaisso_100 " ]
+        },
+        "grid_small": {
+            "description": "Generic SLURM paramaters for running certain rules that are not computationally intensive.",
+            "type": "string",
+            "examples": [ "sbatch -c 1 --mem=1G --time=4:00:00 --partition=qcb --account=mchaisso_100 " ]
+        },
+        "grid_sedef": {
+            "description": "SLURM paramaters for running sedef.",
+            "type": "string",
+            "examples": [ "sbatch -c 16 --mem=48G --time=24:00:00 --partition=qcb --account=mchaisso_100  --constraint=xeon-6130" ]
+        },
+        "grid_blat": {
+            "description": "SLURM paramaters for running certain rules.",
+            "type": "string",
+            "examples": [ "sbatch -c 1 --mem=6G --time=48:00:00 --partition=qcb --account=mchaisso_100 " ]
+        },
+        "grid_repeatmasker": {
+            "description": "SLURM paramaters for running RepeatMasker.",
+            "type": "string",
+            "examples": [ "sbatch -c 1 --mem=16G --time=8:00:00 --partition=qcb --account=mchaisso_100 " ]
+        },
+        "t2t_repeat_library": {
+            "description": "If value is 'na', skips SpecialMaskContig rule designed for use with the human genome.",
+            "type": "string",
+            "examples": [ "na" ]
+        },
+        "genemodel": {
+            "description": "",
+            "type": "object",
+            "properties": {
+                "gencode": {
+                    "description": "Fasta filepath of RNA transcripts of chosen gene model. Gene names must be abbreviated. Recommend using SimplifyFastaGeneDefs.jar to do this.",
+                    "type": "string",
+                    "examples": [ "/scratch1/krabbani/data/taeGut2/GCF_003957565.2_bTaeGut1.4.pri_rna_renamed.fna" ]
+                }
+            },
+            "required": [ "gencode" ]
+        },
+        "index_params": {
+            "description": "Give lra aligner appropriate param (PacBio sequencing read type) when indexing genome. Restrict input to options shown in examples.",
+            "type": "string",
+            "examples": [ " -CCS ", " -CLR " ]
+        },
+        "mapping_params": {
+            "description": "Give lra aligner appropriate param (PacBio sequencing read type) when mapping genome. Restrict input to options shown in examples.",
+            "type": "string",
+            "examples": [ " -CCS ", " -CLR " ]
+        },
+        "scaler": {
+            "$comment": "Check with Mark regarding this param. Used in rule RunVitter in ref_hmm.snakefile which runs command SegDupAnnotation/hmcnc/HMM/viterbi which is absent as of July 2022.",
+            "type": "number",
+            "examples": [ 100 ]
+        },
+        "epsi": {
+            "$comment": "Check with Mark regarding this param. Used in rule RunVitter in ref_hmm.snakefile which runs command SegDupAnnotation/hmcnc/HMM/viterbi which is absent as of July 2022.",
+            "type": "number",
+            "examples": [ 90 ]
+        },
+        "map_p": {
+            "description": "Give rule FilterSubreads in hmm_caller.vert.snakefile and ref_hmm.snakefile appropriate param (PacBio sequencing read type) when filtering subreads. Restrict input to options shown in examples.",
+            "type": "string",
+            "examples": [ "-CCS", "-CLR" ]
+        }
+    },
+    "required": [
+        "species",
+        "reads_bam",
+        "bam",
+        "temp",
+        "grid_large",
+        "grid_medium",
+        "grid_small",
+        "grid_sedef",
+        "grid_blat",
+        "grid_repeatmasker",
+        "t2t_repeat_library",
+        "genemodel",
+        "index_params",
+        "mapping_params",
+        "scaler",
+        "epsi"
+    ]
+}
