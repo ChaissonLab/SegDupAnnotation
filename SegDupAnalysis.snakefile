@@ -7,7 +7,7 @@ from snakemake.utils import validate
 
 # Config
 configfile: "sd_analysis.json"
-validate(config, os.path.dirname(workflow.snakefile) + "/config.schema.json")
+validate(config, os.path.dirname(workflow.snakefile) + "/config.schema.json", set_default=True)
 
 
 

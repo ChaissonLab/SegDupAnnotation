@@ -24,7 +24,8 @@
         "bam": {
             "description": "Name to give file after aligning and merging 'reads_bam' files.",
             "type": "string",
-            "examples": [ "assembly.bam" ]
+            "examples": [ "assembly.bam" ],
+            "default": "assembly.bam"
         },
         "temp": {
             "description": "Filepath to an existing directory for temporary files.",
@@ -78,7 +79,8 @@
         "t2t_repeat_library": {
             "description": "If value is 'na', skips SpecialMaskContig rule designed for use with the human genome.",
             "type": "string",
-            "examples": [ "na" ]
+            "examples": [ "na" ],
+            "default": "na"
         },
         "genemodel": {
             "description": "",
@@ -105,12 +107,14 @@
         "scaler": {
             "$comment": "Check with Mark regarding this param. Used in rule RunVitter in ref_hmm.snakefile which runs command SegDupAnnotation/hmcnc/HMM/viterbi which is absent as of July 2022.",
             "type": "number",
-            "examples": [ 100 ]
+            "examples": [ 100 ],
+            "default": 100
         },
         "epsi": {
             "$comment": "Check with Mark regarding this param. Used in rule RunVitter in ref_hmm.snakefile which runs command SegDupAnnotation/hmcnc/HMM/viterbi which is absent as of July 2022.",
             "type": "number",
-            "examples": [ 90 ]
+            "examples": [ 90 ],
+            "default": 90
         },
         "map_p": {
             "description": "Give rule FilterSubreads in hmm_caller.vert.snakefile and ref_hmm.snakefile appropriate param (PacBio sequencing read type) when filtering subreads. Restrict input to options shown in examples.",
@@ -121,7 +125,6 @@
     "required": [
         "species",
         "reads_bam",
-        "bam",
         "temp",
         "grid_large",
         "grid_medium",
@@ -129,11 +132,8 @@
         "grid_sedef",
         "grid_blat",
         "grid_repeatmasker",
-        "t2t_repeat_library",
         "genemodel",
         "index_params",
-        "mapping_params",
-        "scaler",
-        "epsi"
+        "mapping_params"
     ]
 }
