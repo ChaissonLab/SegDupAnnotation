@@ -7,19 +7,19 @@ sedef/sedef:
 hmcnc/src/hmmcnc: hmcnc/src/hmmcnc.cpp
 	cd hmcnc/src && make
 
-toupper: ToUpper.cpp htslib/lib/libhts.a
+toupper: ToUpper.cpp htslib/libhts.a
 	g++ -O2  $< -o $@  -I htslib/include -Lhtslib/lib -lhts -Wl,-rpath,$(PWD)/htslib/lib  -lhts -lz -lpthread
 
 hardmask: HardMask.cpp
 	g++ -O2 $< -o $@ -I $(CONDA_PREFIX)/include -L$(CONDA_PREFIX)/lib -lhts -Wl,-rpath,$(CONDA_PREFIX)/lib
 
-comask: CombineMask.cpp htslib/lib/libhts.a
+comask: CombineMask.cpp htslib/libhts.a
 	g++ -O2  $< -o $@  -I htslib/include -Lhtslib/lib -lhts -Wl,-rpath,$(PWD)/htslib/lib  -lhts -lz -lpthread
 
-bemask: MaskBed.cpp htslib/lib/libhts.a
+bemask: MaskBed.cpp htslib/libhts.a
 	g++ -O2  $< -o $@  -I htslib/include -Lhtslib/lib -lhts -Wl,-rpath,$(PWD)/htslib/lib  -lhts -lz -lpthread
 
-mask2bed: MaskedToBed.cpp htslib/lib/libhts.a
+mask2bed: MaskedToBed.cpp htslib/libhts.a
 	g++ -O2  $< -o $@  -I htslib/include -Lhtslib/lib -lhts -Wl,-rpath,$(PWD)/htslib/lib  -lhts -lz -lpthread
 
 countn: CountN.cpp

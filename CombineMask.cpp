@@ -1,6 +1,6 @@
 #include <cinttypes>
 
-#include "htslib/kseq.h"
+#include "htslib/htslib/kseq.h"
 
 #include <zlib.h>
 
