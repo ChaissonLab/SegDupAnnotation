@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-export numArgsRequired=1
+numArgsRequired=1
 
 if [ "$#" -lt "$numArgsRequired" ] # is there an argument?
 then
