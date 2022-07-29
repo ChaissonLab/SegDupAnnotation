@@ -1535,7 +1535,7 @@ rule GetCombinedTable:
         sd=SD
     shell:"""
 echo -e "#chrom\\tstart\\tend\\tgene\\tsim\\tidentity\\tcopy" > {output.combined}
-paste {input.bed} {input.cov} | awk '{{ c=int($NF); if (c < 2) {{ c=2; }} print $1"\\t"$2"\\t"$3"\\t"$7"\\t"$18"\\t"$19"\\t"c;}}' >> {output.combined}
+paste {input.bed} {input.cov} | awk '{{ c=int($NF+0.5); if (c < 1) {{ c=1; }} print $1"\\t"$2"\\t"$3"\\t"$7"\\t"$18"\\t"$19"\\t"c;}}' >> {output.combined}
 """
 
 
@@ -1675,7 +1675,7 @@ rule GeneCountFact:
     shell:"""
 cat {input.depth_filt} | \
    bioawk -c hdr -v spec={params.spec} '{{ if (NR < 2) {{ print $0"\\tresolved\\tspecies"; next}} if ($identity == "Copy") {{ print $0"\\tmulti\\t"spec;}} \
-    for (i=1;i<$copy; i++) {{ print $0"\\tcollapse\\t"spec;}} }} ' | tr " " "\\t" > {output.fact}
+    nCopy=int($depth+0.5); for (i=1;i<nCopy; i++) {{ print $0"\\tcollapse\\t"spec;}} }} ' | tr " " "\\t" > {output.fact}
 """
 
 
@@ -1688,9 +1688,9 @@ rule GetFullGeneCountTable:
     params:
         sd=SD
     shell:"""
-
-cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($7)-2; if (cn < 0) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column}
-cat {output.gene_count_2column} | awk '{{ if (NR == 1) {{ print "gene\\tcopies";}} else {{  print $1"\\t"$2+$3;}} }}' > {output.gene_count}
+# CN is the number of _extra_ copies based on read depth.
+cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($8+0.5); if (cn <=1) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column}
+cat {output.gene_count_2column} | awk '{{ if (NR == 1) {{ print "gene\\tcopies";}} else {{ if ($3 > 1 || $2 > 1) {{ print $1"\\t"$2+$3;}} }} }}' > {output.gene_count}
 """
 
 rule GetGeneCountTableAbbreviatedNames:

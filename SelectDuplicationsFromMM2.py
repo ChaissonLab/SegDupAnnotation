@@ -2,14 +2,35 @@
 import sys
 alnFile=open(sys.argv[1])
 alns=[line.split() for line in alnFile]
+keep=[ True ] * len(alns)
+
+endIdx=2
+startIdx=1
+
+for i in range(0,len(alns)):
+    geneName=alns[i][3]
+    origInterval=geneName.split("/")[-1]
+    origStart=int(origInterval.split(":")[-1].split("-")[0])
+    origEnd=int(origInterval.split(":")[-1].split("-")[1])
+    origGeneLength=origEnd-origStart
+    dupAlnLength=int(alns[i][endIdx]) - int(alns[i][startIdx])
+
+    ident=float(alns[i][8])
+    if ident < 0.9 or origGeneLength / dupAlnLength < 0.9 or dupAlnLength / origGeneLength < 0.9:
+        keep[i] = False
+alns2=[]
+
+for i in range(0,len(alns)):
+    if keep[i]:
+        alns2.append(alns[i])
+alns=alns2
+
 
 i=0
 d=0
 isSam=False
 
 geneIdx=3
-endIdx=2
-startIdx=1
 copyNumberIdx=13
 
 while i < len(alns):
@@ -43,8 +64,6 @@ while i < len(alns):
             alns[k].append(str(dupAlnLength / origGeneLength))            
             ident=float(alns[k][8])
             alns[k].append(ident)
-#            import pdb
-#            pdb.set_trace()
 #            print("{}\t{}\t{:2.2f}\t{:2.2f}\t{:2.2f}".format(i,j,dupAlnLength / origGeneLength, origGeneLength / dupAlnLength, ident))
             if dupAlnLength / origGeneLength > 0.9 and origGeneLength / dupAlnLength > 0.9 and ident > 0.9:
                 matchIdx.append(k)
