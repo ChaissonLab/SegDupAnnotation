@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-# Input: bam of assembly mapped to ram bams (see rule MinimapGeneModel in SegDupAnalysis.snakefile).
+# Input:
+#   Arg1: bam of assembly mapped to raw bams (see rule MinimapGeneModel in SegDupAnalysis.snakefile).
+#   Arg2: text noting if source is gencode or not.     
 # Purpose: Filter out input bam entries with <= 50% match (between assembly and reads).
 
 import pysam
