@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+
+# Input: bam of assembly mapped to ram bams (see rule MinimapGeneModel in SegDupAnalysis.snakefile).
+# Purpose: Filter out input bam entries with <= 50% match (between assembly and reads).
+
 import pysam
 import sys
 af = pysam.AlignmentFile(sys.argv[1])
