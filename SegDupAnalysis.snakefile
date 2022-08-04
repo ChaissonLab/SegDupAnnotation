@@ -1366,7 +1366,10 @@ rule MinimapGeneModel:
 minimap2 -x splice -a -t 4 {input.asm} {input.fa}  | samtools sort -T {params.temp}/tmp.$$ -o {output.bam}
 samtools index -c {output.bam}
 """
-
+#
+# Filter out input entries with <= 50% match (between input assembly and input bams/reads).
+# Create csi index of result.
+#
 rule FilterGeneModel:
     input:
         mmbam="{data}.minimapped.bam"
@@ -1381,7 +1384,10 @@ rule FilterGeneModel:
 {params.sd}/FilterMappedLength.py {input.mmbam} any | samtools view -b -o {output.bam}
 samtools index -c {output.bam}
 """
-   
+
+#
+# Get fasta containing reads from input bed file
+#
 rule GetGeneBoundaryFasta:
     input:
         bed="{data}.mapped.bam.bed12.multi_exon",
@@ -1395,6 +1401,9 @@ cat {input.bed} | awk '{{ print $1":"$2"-"$3;}}' > {input.bed}.rgn
 samtools faidx {input.asm} -r {input.bed}.rgn > {output.fa}
 """
 
+#
+# Replace uninformative gene name with actual gene name
+#
 rule GetNamedFasta:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta",
@@ -1552,7 +1561,9 @@ rule MinimapGeneModelBed:
 bedtools bamtobed -bed12 -i {input.bam} > {output.bed}
 """
 
-
+#
+# Keep only genes with >1 exon that's >1000 bases long
+#
 rule FilterMultiExonBed:
     input:
         bed="{data}.mapped.bam.bed12"
