@@ -1,0 +1,11 @@
+# files git will ignroe
+# Following are compiled C++ files created in Makefile
+bamToFreq
+bemask
+comask
+hardmask
+mask2bed
+nl
+toupper
+sedef/sedef
+hmcnc/src/hmmcnc
