@@ -35,7 +35,7 @@ pos=[]
 subs=["all", "high_ident"]
 
 
-localrules: all, GetUniqueGencodeUnresolvedDupGenes, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDuplicatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, SplitSplicedAndSingleExon, UnionMasked,GetNamedFasta, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, AnnotateHighIdentity, GetTotalMasked, GeneCountFact, GetGeneCountTableAbbreviatedNames, FilterMultiExonBed, MappedSamIdentityDups, RemoveBams, MakeSedefIntv, HighestIdentPairs, SelectHighIdent, GetCollapseByRange, GetCollapsedMask, GetCN
+localrules: all, GetUniqueGencodeUnresolvedDupGenes, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDuplicatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, SplitSplicedAndSingleExon, UnionMasked,GetNamedFasta, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, AnnotateHighIdentity, GetTotalMasked, GeneCountFact, GetGeneCountTableAbbreviatedNames, FilterMultiExonBed, MappedSamIdentityDups, RemoveBams, MakeSedefIntv, HighestIdentPairs, SelectHighIdent, GetCollapseByRange, GetCollapsedMask, GetCN, DupDepthPerGeneSummary
 
 
 
@@ -64,6 +64,7 @@ rule all:
         combined_gencode="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined",
         comb_with_depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
         fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.fact",
+        depth_per_gene="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.depthPerGene",
         gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count",
         gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count_multi_single",
         gene_count_abbrvNames="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count.abbrv_names",
@@ -1677,7 +1678,26 @@ rule FilterLowDepthDups:
         depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
     shell:"""
 cat {input.depth} | bioawk -c hdr '{{ if ($depth > 0.05) print;}}' > {output.depth_filt}
+"""
 
+# depth per gene summary stats
+rule DupDepthPerGeneSummary:
+    input:
+        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
+        mean="hmm/mean_cov.txt",
+    output:
+        depth_per_gene="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.depthPerGene",
+    shell:"""
+# Assumption: input data sorted by gene first
+cat {input.depth_filt} | cut -f4,8 | tr '/' '\t' | cut -f1,3 | tail -n+2 | \
+  awk -v meanCov=`cat {input.mean}` 'BEGIN {{OFS="\t"; gene=""; sum=0; count=0; print "#gene\tdepthOverMeanAsm\tdepth\tmeasuredCov\tcopyCount"}} \
+  (NR==1) {{gene=$1; sum=$2; count=1}} \
+  (NR>1) {{\
+    if ($1==gene) \
+        {{sum+=$2; count++}} \
+    else \
+        {{print gene,sum,sum*meanCov,sprintf("%1.f", sum),count; gene=$1; sum=$2;count=1}} }} \
+  END {{  print gene,sum,sum*meanCov,sprintf("%1.f", sum),count}}' > {output.depth_per_gene}
 """
 
 rule GeneCountFact:
