@@ -1689,15 +1689,17 @@ rule DupDepthPerGeneSummary:
         depth_per_gene="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.depthPerGene",
     shell:"""
 # Assumption: input data sorted by gene first
-cat {input.depth_filt} | cut -f4,8 | tr '/' '\t' | cut -f1,3 | tail -n+2 | \
-  awk -v meanCov=`cat {input.mean}` 'BEGIN {{OFS="\t"; gene=""; sum=0; count=0; print "#gene\tdepthOverMeanAsm\tdepth\tmeasuredCov\tcopyCount"}} \
-  (NR==1) {{gene=$1; sum=$2; count=1}} \
+cat {input.depth_filt} | cut -f4,7,8 | tr '/' '\t' | cut -f1,3,4 | tail -n+2 | \
+  awk -v meanCov=`cat {input.mean}` \
+  'BEGIN {{OFS="\t"; gene=""; sum=0; count=0; resolvedNum=0; \
+  print "#gene\tdepthOverMeanAsm\tdepth\tmeasuredCov\tcopyCount\tresolvedCount"}} \
+  (NR==1) {{gene=$1; sum=$3; count=$2; resolvedNum=1}} \
   (NR>1) {{\
     if ($1==gene) \
-        {{sum+=$2; count++}} \
+        {{sum+=$3; count+=$2; resolvedNum++}} \
     else \
-        {{print gene,sum,sum*meanCov,sprintf("%1.f", sum),count; gene=$1; sum=$2;count=1}} }} \
-  END {{  print gene,sum,sum*meanCov,sprintf("%1.f", sum),count}}' > {output.depth_per_gene}
+        {{print gene,sum,sum*meanCov,sprintf("%1.f", sum),count,resolvedNum; gene=$1; sum=$3; count=$2; resolvedNum=1}} }} \
+  END {{  print gene,sum,sum*meanCov,sprintf("%1.f", sum),count,resolvedNum}}' > {output.depth_per_gene}
 """
 
 rule GeneCountFact:
