@@ -120,7 +120,7 @@ def GetBam(f):
     return f.split("/")[-1]
 
 #
-# Map individual bams separately
+# Map individual bams separately to asm & sort by left pos.
 #
     
 rule AlignBam:
@@ -402,10 +402,11 @@ else:
 ln -sf {input.orig} {output.comb}
 samtools faidx {output.comb}
 """
+
 #
 # Use excess depth to count duplications
+# (Uses longest contig to calculate coverage.)
 #
-
 rule RunRefDepthHmm:
    input:
        v="assembly.bam",
@@ -426,6 +427,7 @@ mkdir -p hmm
 bedtools sort -i hmm/cov_bins.bed | bgzip -c > hmm/cov_bins.bed.gz
 tabix hmm/cov_bins.bed.gz
 """
+# 
 
 rule ConvertHMMCopyNumberToCollapsedDuplications:
     input:
@@ -1145,7 +1147,9 @@ cat {input.coll} {input.res} | sort > {output.summary}
 #        rnabed=
 #
 
-
+#
+# Calculate percent assembly masked.
+#
 rule CountMaskedAsmp:
     input:
         asm="{assembly}"
@@ -1159,7 +1163,7 @@ rule CountMaskedAsmp:
     shell:"""
 cat {input.asm} | {params.sd}/nl > {output.countMasked}
 """
-
+# nl is the compiled version of CountRep.cpp
 
 
 rule FilterGencodeBed12:
@@ -1480,7 +1484,7 @@ rule AnnotateOriginal:
         annot="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig",
     params:
         sd=SD,
-        grid_opts=config["grid_medium"] # KEON
+        grid_opts=config["grid_medium"]
     shell:"""
 {params.sd}/AnnotateOriginal.py {input.mappedsambeddups} > {output.annot}
 """
@@ -1501,7 +1505,7 @@ done |
     {params.sd}/FixOriginalCopy.py | \
   sort -k4,4 -k2,2n | \
   bedtools groupby -g 1-4 -c 1 -o first -full | \
-  cut -f 1-16 | sort -k4,4 -k1,1 -k2,2n | bedtools sort  |  {params.sd}/RemoveAnyOverlappingGenes.py > {output.iso}
+  cut -f 1-16 | sort -k4,4 -k1,1 -k2,2n | bedtools sort > {output.iso}
 """
 ##    cat {input.dups} | {params.sd}/FilterMembersFromSameIsoformSet.py stdin | \
 #  {params.sd}/SimplifyName.py | \
