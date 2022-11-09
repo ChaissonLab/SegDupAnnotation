@@ -53,9 +53,9 @@ rule all:
     input:
         fai=assembly+".fai",
         bam=config["bam"],
-        sedef="sedef_out/final.bed",
-        sedef_sorted="sedef_out/final.sorted.bed",
-        filt="sedef_out/all/final.sorted.bed.final.filt",        
+        #sedef="sedef_out/final.bed",
+        #sedef_sorted="sedef_out/final.sorted.bed",
+        #filt="sedef_out/all/final.sorted.bed.final.filt",        
         mappedsam="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
         mappedsambed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
         mappedsambeddups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
@@ -70,7 +70,7 @@ rule all:
         gene_count_abbrvNames="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count.abbrv_names",
         asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
-        sedef_high_uniq="sedef_out/all/final.sorted.bed.uniq.high",        
+        #sedef_high_uniq="sedef_out/all/final.sorted.bed.uniq.high",        
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
 # CIRCOS targets
 #        links="circos/genes_in_resolved_dups.links.tsv",
