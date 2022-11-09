@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+
+# Purpose: summarize coverage data from hmcnc output (hmm/cov_bins.bed) used in GetCoverageOfRegions.sh
+# Input: "\n"-separated list of coverage data points 
+# Output: <coverage> <median bin coverage> <std dev of bin coverage> <variance of bin coverage> <num bins>
+
 import sys
 import math
 import numpy as np
