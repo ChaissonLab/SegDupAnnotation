@@ -1703,6 +1703,7 @@ cat {input.depth_filt} | cut -f4,7,8 | tr '/' '\t' | cut -f1,3,4 | tail -n+2 | \
   END {{  print gene,sum,sum*meanCov,sprintf("%1.f", sum),count,resolvedNum}}' > {output.depth_per_gene}
 """
 
+
 # depth per gene gene summary stats
 rule DupDepthPerGeneCopy:
     input:
@@ -1725,6 +1726,20 @@ cat {input.depth_filt} | tr '/' '\t' | cut -f1-4,8,9 | \
             print $0,copyNum,geneNum; copyNum++}}' > {output.depth_per_gene_copy}
 """
 
+rule SummaryStats:
+    input:
+        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
+        mean="hmm/mean_cov.txt",
+        colDups="collapsed_duplications.bed.range4",
+    output:
+        depth_per_gene_copy="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.depthPerCopy",
+    shell:"""
+collapsedBases="$(cat {input.colDups} | awk \
+    'BEGIN {{OFS="\t";sum=0}} \
+    ($6>1) {{sum+=($3-$2)*($6-1)}} \
+    END {{print sum}}')"
+"""
+
 
 rule GeneCountFact:
     input:
@@ -1735,8 +1750,15 @@ rule GeneCountFact:
         spec=config["species"]
     shell:"""
 cat {input.depth_filt} | \
-   bioawk -c hdr -v spec={params.spec} '{{ if (NR < 2) {{ print $0"\\tresolved\\tspecies"; next}} if ($identity == "Copy") {{ print $0"\\tmulti\\t"spec;}} \
-    nCopy=int($depth+0.5); for (i=1;i<nCopy; i++) {{ print $0"\\tcollapse\\t"spec;}} }} ' | tr " " "\\t" > {output.fact}
+    bioawk -c hdr -v spec={params.spec} '{{ \
+        if (NR < 2) {{ \
+            print $0"\\tresolved\\tspecies"; next}} \
+        if ($identity == "Copy") \
+            {{ print $0"\\tmulti\\t"spec;}} \
+        nCopy=int($depth+0.5); \
+        for (i=1;i<nCopy; i++) {{ \
+            print $0"\\tcollapse\\t"spec;}} }} ' | \
+    tr " " "\\t" > {output.fact}
 """
 
 
