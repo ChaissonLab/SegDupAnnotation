@@ -35,7 +35,7 @@ pos=[]
 subs=["all", "high_ident"]
 
 
-localrules: all, GetUniqueGencodeUnresolvedDupGenes, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDuplicatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, SplitSplicedAndSingleExon, UnionMasked,GetNamedFasta, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, AnnotateHighIdentity, GetTotalMasked, GeneCountFact, GetGeneCountTableAbbreviatedNames, FilterMultiExonBed, MappedSamIdentityDups, RemoveBams, MakeSedefIntv, HighestIdentPairs, SelectHighIdent, GetCollapseByRange, GetCollapsedMask, GetCN, DupDepthPerGeneSummary
+localrules: all, GetUniqueGencodeUnresolvedDupGenes, MakeWMBed, MaskFile, ConvertHMMCopyNumberToCollapsedDuplications, SortSedef, FilterSedef, CountMaskedSedef, RemoveSedefTooMasked, MakeSedefGraph, MakeSedefGraphTable, FilterByGraphClusters, GetUniqueGencodeUnresolvedDupGenesCN, GetUniqueGencodeUnresolvedDupGenes, GetGencodeMulticopy, GetGencodeMappedInDup, GetSupportedMulticopy,FindResolvedDuplicatedGenes, Bed12ToBed6, CombineGenesWithCollapsedDups, CombineDuplicatedGenes, MinimapGeneModelBed, FilterGencodeBed12, SplitSplicedAndSingleExon, UnionMasked,GetNamedFasta, SortDups, GetDepthOverDups, FilterLowDepthDups, GetFullGeneCountTable, GetCombinedTable, SelectDupsOneIsoform, GetFinalMerged, DupsPerContig, AnnotateHighIdentity, GetTotalMasked, GeneCountFact, GetGeneCountTableAbbreviatedNames, FilterMultiExonBed, MappedSamIdentityDups, RemoveBams, MakeSedefIntv, HighestIdentPairs, SelectHighIdent, GetCollapseByRange, GetCollapsedMask, GetCN, DupDepthPerGeneSummary, DupDepthPerGeneCopy
 
 
 
@@ -65,6 +65,7 @@ rule all:
         comb_with_depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
         fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.fact",
         depth_per_gene="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.depthPerGene",
+        depth_per_gene_copy="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.depthPerCopy",
         gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count",
         gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count_multi_single",
         gene_count_abbrvNames="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count.abbrv_names",
@@ -1701,6 +1702,29 @@ cat {input.depth_filt} | cut -f4,7,8 | tr '/' '\t' | cut -f1,3,4 | tail -n+2 | \
         {{print gene,sum,sum*meanCov,sprintf("%1.f", sum),count,resolvedNum; gene=$1; sum=$3; count=$2; resolvedNum=1}} }} \
   END {{  print gene,sum,sum*meanCov,sprintf("%1.f", sum),count,resolvedNum}}' > {output.depth_per_gene}
 """
+
+# depth per gene gene summary stats
+rule DupDepthPerGeneCopy:
+    input:
+        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
+        mean="hmm/mean_cov.txt",
+    output:
+        depth_per_gene_copy="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.depthPerCopy",
+    shell:"""
+cat {input.depth_filt} | tr '/' '\t' | cut -f1-4,8,9 | \
+    awk -v meanAsmCov=`cat {input.mean}` \
+        'BEGIN {{OFS="\t"; \
+        print "#chrom\tstart\tend\tgeneName\tcollapsedCopies\tgeneCov\tchrCov\tasmCov\tgeneCovP\tchrCovP\tlen\tchrLen"}} \
+        (NR>1) {{print $1,$2,$3,$4,$5,$6*meanAsmCov,"chrCov",meanAsmCov,$6,"chrCovP",$3-$2,"chrLen"}}' | \
+    awk \
+        'BEGIN {{OFS="\t";gene="";copyNum=0;geneNum=0}} \
+        (NR==1) {{print$0,"geneSuffix","geneNum"}} \
+        (NR>1) {{\
+            if ($4!=gene) \
+                {{gene=$4; copyNum=0; geneNum++}}; \
+            print $0,copyNum,geneNum; copyNum++}}' > {output.depth_per_gene_copy}
+"""
+
 
 rule GeneCountFact:
     input:
