@@ -1716,10 +1716,12 @@ cat {input.depth_filt} | tr '/' '\t' | cut -f1-4,8,9 | \
     awk -v meanAsmCov=`cat {input.mean}` \
         'BEGIN {{OFS="\t"; \
         print "#chrom\tstart\tend\tgeneName\tcollapsedCopies\tgeneCov\tchrCov\tasmCov\tgeneCovP\tchrCovP\tlen\tchrLen"}} \
-        (NR>1) {{print $1,$2,$3,$4,$5,$6*meanAsmCov,"chrCov",meanAsmCov,$6,"chrCovP",$3-$2,"chrLen"}}' | \
+        (NR>1) \
+            {{print $1,$2,$3,$4,$5,$6*meanAsmCov,"chrCov",meanAsmCov,$6,"chrCovP",$3-$2,"chrLen"}}' | \
     awk \
         'BEGIN {{OFS="\t";gene="";copyNum=0;geneNum=0}} \
-        (NR==1) {{print$0,"geneSuffix","geneNum"}} \
+        (NR==1) \
+            {{print$0,"geneSuffix","geneNum"}} \
         (NR>1) {{\
             if ($4!=gene) \
                 {{gene=$4; copyNum=0; geneNum++}}; \
@@ -1736,8 +1738,10 @@ rule SummaryStats:
     shell:"""
 collapsedBases="$(cat {input.colDups} | awk \
     'BEGIN {{OFS="\t";sum=0}} \
-    ($6>1) {{sum+=($3-$2)*($6-1)}} \
+    ($6>1) \
+        {{sum+=($3-$2)*($6-1)}} \
     END {{print sum}}')"
+resolvedBases="$(cat gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt | tr ':' '\t' | tr '-' '\t' | tr '/' '\t' | tail -n+2 | sort -k4,4 -k1,1 -k2,2n -k3,3n | uniq | awk 'BEGIN {OFS="\t"; sum=0} {sum+=$3-$2} END {print sum}')"
 """
 
 
@@ -1756,7 +1760,7 @@ cat {input.depth_filt} | \
         if ($identity == "Copy") \
             {{ print $0"\\tmulti\\t"spec;}} \
         nCopy=int($depth+0.5); \
-        for (i=1;i<nCopy; i++) {{ \
+        for (i=1; i<nCopy; i++) {{ \
             print $0"\\tcollapse\\t"spec;}} }} ' | \
     tr " " "\\t" > {output.fact}
 """
