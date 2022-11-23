@@ -1744,7 +1744,7 @@ collapsedBases="$(cat {input.colDups} | awk \
 resolvedBases="$(cat gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt | tr ':' '\t' | tr '-' '\t' | tr '/' '\t' | tail -n+2 | sort -k4,4 -k1,1 -k2,2n -k3,3n | uniq | awk 'BEGIN {OFS="\t"; sum=0} {sum+=$3-$2} END {print sum}')"
 """
 
-
+# counting resolved copies of genes and collapses of genes EXCLUDING ORIGINALS
 rule GeneCountFact:
     input:
         depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
