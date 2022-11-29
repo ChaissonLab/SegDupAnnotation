@@ -73,6 +73,7 @@ rule all:
         uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         #sedef_high_uniq="sedef_out/all/final.sorted.bed.uniq.high",        
         uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
+        summary="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.summary",
 # CIRCOS targets
 #        links="circos/genes_in_resolved_dups.links.tsv",
 #        names="circos/genes_in_resolved_dups.links.names.tsv",
@@ -1731,17 +1732,51 @@ cat {input.depth_filt} | tr '/' '\t' | cut -f1-4,8,9 | \
 rule SummaryStats:
     input:
         depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
+        fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.fact",
         mean="hmm/mean_cov.txt",
         colDups="collapsed_duplications.bed.range4",
     output:
-        depth_per_gene_copy="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.depthPerCopy",
+        summary="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.summary",
     shell:"""
-collapsedBases="$(cat {input.colDups} | awk \
+collapsedBasesTotal="$(cat {input.colDups} | awk \
     'BEGIN {{OFS="\t";sum=0}} \
     ($6>1) \
         {{sum+=($3-$2)*($6-1)}} \
-    END {{print sum}}')"
-resolvedBases="$(cat gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt | tr ':' '\t' | tr '-' '\t' | tr '/' '\t' | tail -n+2 | sort -k4,4 -k1,1 -k2,2n -k3,3n | uniq | awk 'BEGIN {OFS="\t"; sum=0} {sum+=$3-$2} END {print sum}')"
+    END {{print sum}}')" # sum of total collapsed bases (regardless of occurence within gene)
+collapsedBasesInGenes="$(cat {input.fact} } | awk \
+    'BEGIN {{OFS="\t"; sum=0}} \
+    (NR>1 && $9=="collapse") \
+        {{sum+=($3-$2)}} \
+    END {{print sum}}')" # sum of collapsed gene copies (excludes 'original' copies and resolved copies)
+resolvedBases="$(cat {input.fact} } | awk \
+    'BEGIN {{OFS="\t"; sum=0}} \
+    (NR>1 && $9=="multi") \
+        {{sum+=($3-$2)}} \
+    END {{print sum}}')" # sum of resolved copies of genes (excludes 'original' copies and collapses)
+resolvedGeneCount="$(cat {input.fact} | tr ':' '\t' | tr '-' '\t' | tr '/' '\t' | tail -n+2 | \
+    awk \
+        'BEGIN {{OFS="\t"}} \
+        ($12=="multi") \
+            {{print $4}}' | \
+    uniq | wc -l)"
+collapsedGeneCount="$(cat {input.fact} | tr ':' '\t' | tr '-' '\t' | tr '/' '\t' | tail -n+2 | \
+    awk \
+        'BEGIN {{OFS="\t"}} \
+        ($12=="collapse") \
+            {{print $4}}' \
+    | uniq | wc -l)"
+collapsedDuplicationCount="$(cat {input.fact} | awk \
+    'BEGIN {{OFS="\t"; count=0}} \
+    (NR>1 && $9=="collapse") \
+        {{count+=1}} \
+    END {{print count}}')"
+
+echo -e "resolved_duplicated_gene_count\t$resolvedGeneCount\n\
+resolved_duplicate_bases\t$resolvedBases\n\
+collapsed_duplications_count\t$collapsedDuplicationCount\n\
+collapsed_duplicated_gene_count\t$collapsedGeneCount\n\
+bases_in_collapsed_genes\t$collapsedBasesInGenes\n\
+Total_collapsed_bases\t$collapsedBasesTotal" > {output.summary}
 """
 
 # counting resolved copies of genes and collapses of genes EXCLUDING ORIGINALS
