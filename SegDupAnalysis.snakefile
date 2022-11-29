@@ -1737,18 +1737,20 @@ rule SummaryStats:
         colDups="collapsed_duplications.bed.range4",
     output:
         summary="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.summary",
+    params:
+        grid_opts=config["grid_small"],
     shell:"""
 collapsedBasesTotal="$(cat {input.colDups} | awk \
     'BEGIN {{OFS="\t";sum=0}} \
     ($6>1) \
         {{sum+=($3-$2)*($6-1)}} \
     END {{print sum}}')" # sum of total collapsed bases (regardless of occurence within gene)
-collapsedBasesInGenes="$(cat {input.fact} } | awk \
+collapsedBasesInGenes="$(cat {input.fact} | awk \
     'BEGIN {{OFS="\t"; sum=0}} \
     (NR>1 && $9=="collapse") \
         {{sum+=($3-$2)}} \
     END {{print sum}}')" # sum of collapsed gene copies (excludes 'original' copies and resolved copies)
-resolvedBases="$(cat {input.fact} } | awk \
+resolvedBases="$(cat {input.fact} | awk \
     'BEGIN {{OFS="\t"; sum=0}} \
     (NR>1 && $9=="multi") \
         {{sum+=($3-$2)}} \
