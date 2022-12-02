@@ -1813,7 +1813,7 @@ rule GetFullGeneCountTable:
         sd=SD
     shell:"""
 # CN is the number of _extra_ copies based on read depth.
-cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($8+0.5); if (cn <=1) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column}
+cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($8+0.5-1); if (cn <=1) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column} # counts "resolved copies" (excluding original copy)
 cat {output.gene_count_2column} | awk '{{ if (NR == 1) {{ print "gene\\tcopies";}} else {{ if ($3 > 1 || $2 > 1) {{ print $1"\\t"$2+$3;}} }} }}' > {output.gene_count}
 """
 
