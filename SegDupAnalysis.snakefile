@@ -1813,8 +1813,27 @@ rule GetFullGeneCountTable:
         sd=SD
     shell:"""
 # CN is the number of _extra_ copies based on read depth.
-cat {input.depth_filt} | awk '{{ if (NR == 1) {{ print "gene\\tresolved\\tcollapsed"; }} else {{ cn=int($8+0.5-1); if (cn <=1) {{ cn=0;}}  print $4"\\t1\\t"cn;}} }}' | bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column} # counts "resolved copies" (excluding original copy)
-cat {output.gene_count_2column} | awk '{{ if (NR == 1) {{ print "gene\\tcopies";}} else {{ if ($3 > 1 || $2 > 1) {{ print $1"\\t"$2+$3;}} }} }}' > {output.gene_count}
+cat {input.depth_filt} | \
+    awk 'BEGIN {{ OFS="\\t"; cn=0; nResolved=0; }} \
+        (NR==1) \
+            {{ print "gene","resolved","collapsed"; }} \
+        (NR>1) \
+            {{ cn=int($8+0.5-1); \
+            if ($6=="Original") \
+                {{ nResolved=0; }} \
+            else \
+                {{ nResolved=1; }} \
+            if (cn < 1) \
+                {{ cn=0; }} \
+            print $4,nResolved,cn; }}' | \
+    bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2column} # counts "resolved copies" (excluding original copy)
+cat {output.gene_count_2column} | \
+    awk 'BEGIN {{ OFS="\\t" }} \
+        (NR == 1) \
+            {{ print "gene","copies_(excludes_originals)";}} \
+        (NR > 1) \
+            {{ if ($3 > 0 || $2 > 0) \
+                {{ print $1,$2+$3;}} }}' > {output.gene_count}
 """
 
 rule GetGeneCountTableAbbreviatedNames:
