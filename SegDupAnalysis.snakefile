@@ -1778,9 +1778,9 @@ cat {input.depthFA} | awk 'BEGIN {{ OFS="\\t" }} \
     (NR==1) {{ print $0}} \
     (NR>1)  {{ \
         if ($9 > 0.05) \
-            {{ print $0 }} \
+            {{ print $1,$2,$3,$4,$5,$6,$7,$9,$8 }} \
         else \
-            {{ print $1,$2,$3,$4,$5,$6,$7,"filtOut:FilterLowDepthDups("$8")",$9 }} \
+            {{ print $1,$2,$3,$4,$5,$6,$7,$9,"filtOut:FilterLowDepthDups("$8")" }} \
     }}' > {output.depth_filtFA}
 """
 
@@ -1904,7 +1904,8 @@ cat {input.depth_filt} | \
         for (i=1; i<nCopy; i++) {{ \
             print $0"\\tcollapse\\t"spec;}} }} ' | \
     tr " " "\\t" > {output.fact}
-    
+
+# Filter Analysis
 cat {input.depth_filtFA} | \
     bioawk -c hdr -v spec={params.spec} '{{ \
         if (NR < 2) {{ \
@@ -1958,7 +1959,7 @@ cat {output.gene_count_2column} | \
 cat {input.depth_filtFA} | \
     awk 'BEGIN {{ OFS="\\t"; cn=0; nResolved=0; }} \
         (NR==1) \
-            {{ print "gene","resolved","collapsed"; }} \
+            {{ print "gene","resolved","collapsed","filt_step"; }} \
         (NR>1) \
             {{ cn=int($8+0.5-1); \
             if ($6=="Original") \
@@ -1967,15 +1968,15 @@ cat {input.depth_filtFA} | \
                 {{ nResolved=1; }} \
             if (cn < 1) \
                 {{ cn=0; }} \
-            print $4,nResolved,cn; }}' | \
-    bedtools groupby -header -g 1 -c 2,3 -o sum,sum > {output.gene_count_2columnFA} # counts "resolved copies" (excluding original copy)
+            print $4,nResolved,cn,$9; }}' | \
+    bedtools groupby -header -g 1 -c 2,3,4 -o sum,sum,collapse > {output.gene_count_2columnFA} # counts "resolved copies" (excluding original copy)
 cat {output.gene_count_2columnFA} | \
     awk 'BEGIN {{ OFS="\\t" }} \
         (NR == 1) \
             {{ print "gene","copies_(excludes_originals)";}} \
         (NR > 1) \
             {{ if ($3 > 0 || $2 > 0) \
-                {{ print $1,$2+$3;}} }}' > {output.gene_countFA}
+                {{ print $1,$2+$3,$4;}} }}' > {output.gene_countFA}
 """
 
 rule GetGeneCountTableAbbreviatedNames:
