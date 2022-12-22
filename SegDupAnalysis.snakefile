@@ -1538,25 +1538,21 @@ rule SelectDupsOneIsoform:
         isoFA="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.one_isoform.filtAnn"
     params:
         sd=SD,
-        grid_opts=config["grid_medium"]
+        grid_opts=" sbatch -c 64 --mem=16G --time=24:00:00 --partion=qcb --account=mchaisso_100 "
     shell:"""
 cut -f 4 {input.dups} |   {params.sd}/SimplifyName.py | cut -f1 -d "|" | sort | uniq > {input.dups}.genes
-for gene in `cat {input.dups}.genes`; do
-  grep "$gene|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse ; \
-done |
+cat {input.dups}.genes | xargs -P 64 -I % sh -c 'grep -F "%|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse' | \
   {params.sd}/SimplifyName.py | \
-    {params.sd}/FixOriginalCopy.py | \
+  {params.sd}/FixOriginalCopy.py | \
   sort -k4,4 -k2,2n | \
   bedtools groupby -g 1-4 -c 1 -o first -full | \
   cut -f 1-16 | sort -k4,4 -k1,1 -k2,2n | bedtools sort > {output.iso}
 
 # Filter Analysis:
-cut -f 4 {input.dupsFA} |   {params.sd}/SimplifyName.py | cut -f1 -d "|" | sort | uniq > {input.dupsFA}.genes
-for gene in `cat {input.dupsFA}.genes`; do
-  grep "$gene|" {input.dupsFA} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse,collapse ; \
-done |
+cut -f 4 {input.dupsFA} | {params.sd}/SimplifyName.py | cut -f1 -d "|" | sort | uniq > {input.dupsFA}.genes
+cat {input.dupsFA}.genes | xargs -P 64 -I % sh -c 'grep -F "%|" {input.dupsFA} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16,17 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse,collapse' | \
   {params.sd}/SimplifyName.py | \
-    {params.sd}/FixOriginalCopy_filtAnn.py | \
+  {params.sd}/FixOriginalCopy_filtAnn.py | \
   sort -k4,4 -k2,2n | \
   bedtools groupby -g 1-4 -c 1 -o first -full | \
   cut -f 1-17 | sort -k4,4 -k1,1 -k2,2n | bedtools sort > {output.isoFA}
@@ -1756,7 +1752,7 @@ bedtools intersect -header -loj -a {input.combFA} -b {input.bins} -sorted | \
     {{ print $0,"dc","ds","dc","dv" }} \
   (NR>1) \
     {{ print $0}}' | \
-  bedtools groupby -g 1-4 -c 11 -o mean | \
+  bedtools groupby -g 1-4 -c 12 -o mean | \
   cut -f 4,5 | awk -v m=$m '{{ print $1"\\t"$2/m;}}' >> {input.combFA}.cn
 
 paste {input.combFA} <( cut -f 2 {input.combFA}.cn ) | \
@@ -1775,7 +1771,7 @@ cat {input.depth} | bioawk -c hdr '{{ if ($depth > 0.05) print;}}' > {output.dep
 
 # Filter Analysis:
 cat {input.depthFA} | awk 'BEGIN {{ OFS="\\t" }} \
-    (NR==1) {{ print $0}} \
+    (NR==1) {{ print $1,$2,$3,$4,$5,$6,$7,$9,$8}} \
     (NR>1)  {{ \
         if ($9 > 0.05) \
             {{ print $1,$2,$3,$4,$5,$6,$7,$9,$8 }} \
