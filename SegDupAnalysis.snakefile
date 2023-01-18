@@ -1538,7 +1538,7 @@ rule SelectDupsOneIsoform:
         isoFA="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.one_isoform.filtAnn"
     params:
         sd=SD,
-        grid_opts=" sbatch -c 64 --mem=16G --time=24:00:00 --partion=qcb --account=mchaisso_100 "
+        grid_opts=" sbatch -c 64 --mem=16G --time=24:00:00 --partition=qcb --account=mchaisso_100 "
     shell:"""
 cut -f 4 {input.dups} |   {params.sd}/SimplifyName.py | cut -f1 -d "|" | sort | uniq > {input.dups}.genes
 cat {input.dups}.genes | xargs -P 64 -I % sh -c 'grep -F "%|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse' | \
