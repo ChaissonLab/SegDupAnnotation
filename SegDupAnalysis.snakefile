@@ -1451,7 +1451,7 @@ rule MapNamedSam:
     resources:
         load=16
     shell:"""
-minimap2 -a -N 20 -p 0.5 -t {resources.load} {input.asm} {input.fa}  > {output.mappedsam}
+minimap2 -a -N 100 -p 0.5 -t {resources.load} {input.asm} {input.fa}  > {output.mappedsam}
 """
         
 rule MappedSamIdentity:
