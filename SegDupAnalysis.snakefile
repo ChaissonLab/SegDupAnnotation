@@ -56,7 +56,7 @@ rule all:
         #sedef="sedef_out/final.bed",
         #sedef_sorted="sedef_out/final.sorted.bed",
         #filt="sedef_out/all/final.sorted.bed.final.filt",        
-        mappedsam="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
+        #mappedsam="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
         mappedsambed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
         mappedsambeddups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
         mappedsambeddupsorigAnnot="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig",
@@ -1440,18 +1440,18 @@ rule GetNamedFasta:
 {params.sd}/RenameFastaWithGenes.py {input.fa} {input.bed12} > {output.named}
 """
 
-rule MapNamedSam:
+rule MapNamedPaf:
     input:
         fa="{data}.mapped.bam.bed12.multi_exon.fasta.named",
         asm="assembly.orig.fasta"
     output:
-        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
+        mappedpaf="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf",
     params:
         grid_opts=config["grid_large"],
     resources:
         load=16
     shell:"""
-minimap2 -a -N 100 -p 0.5 -t {resources.load} {input.asm} {input.fa}  > {output.mappedsam}
+minimap2 -x asm5 -p 0.2 -N 100 -m 10 -E2,0 -s 10 -t {resources.load} {input.asm} {input.fa}  > {output.mappedpaf}
 """
         
 rule MappedSamIdentity:
