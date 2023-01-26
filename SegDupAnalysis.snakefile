@@ -57,7 +57,7 @@ rule all:
         #sedef_sorted="sedef_out/final.sorted.bed",
         #filt="sedef_out/all/final.sorted.bed.final.filt",        
         #mappedsam="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
-        mappedsambed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
+        #mappedsambed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
         mappedsambeddups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
         mappedsambeddupsorigAnnot="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig",
         mappeddupsOneIsoform="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.one_isoform",
@@ -1454,21 +1454,21 @@ rule MapNamedPaf:
 minimap2 -x asm5 -p 0.2 -N 100 -m 10 -E2,0 -s 10 -t {resources.load} {input.asm} {input.fa}  > {output.mappedpaf}
 """
         
-rule MappedSamIdentity:
+rule MappedPafIdentity:
     input:
-        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
+        mappedpaf="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf",
     output:
-        mappedsambed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
+        mappedpafbed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.bed",
     params:
         grid_opts=config["grid_small"],
         sd=SD,
     shell:"""
- {params.sd}/hmcnc/src/samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
+cat {input.mappedpaf} | awk 'BEGIN {{OFS="\t"}} {{if ($5=="+") {{strand=0}} else {{strand=1}} print $6,$8,$9,$1,strand,$3,$4,$12,$10/$11,$10,"_","_","_"}}' > {output.mappedpafbed}
 """
 
 rule AddDepthCopyNumber:
     input:
-        bed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
+        bed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.bed",
         col="collapsed_duplications.bed.range4",
         colFA="collapsed_duplications.bed.range4.filtAnn"
     output:
