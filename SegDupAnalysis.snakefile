@@ -1454,16 +1454,111 @@ rule MapNamedPaf:
 minimap2 -x asm5 -p 0.2 -N 100 -m 10 -E2,0 -s 10 -t {resources.load} {input.asm} {input.fa}  > {output.mappedpaf}
 """
         
+rule AppendCigarToPaf:
+    input:
+        paf="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf",
+        asm="assembly.orig.fasta"
+    output:
+        pafWithCig="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.cig",
+    params:
+        grid_opts=config["grid_xLarge"],
+        sd=SD,
+    resources:
+        load=64
+    shell:"""
+paf_cigs_path=`mktemp -d -t tmp.paf_cigs.XXXX`
+export paf_cigs_path
+
+# Function to cut genes from asm, minimap them, and make cigar
+getSams () {{
+    # input is paf line after $tr '/' '\t' | awk 'BEGIN {{OFS="\" \""}} {{print "\""NR,$1,$2,$7,$9,$10"\""}}'
+    local hit_num="$1"
+    local gene="$2"
+    local src_rgn="$3"
+    local trg_rgn="$4:$5-$6"
+
+    src_fasta_path=`mktemp -p "$paf_cigs_path" -t tmp.src."$hit_num".XXXX`
+    trg_fasta_path=`mktemp -p "$paf_cigs_path" -t tmp.trg."$hit_num".XXXX`
+    paf_path=`mktemp -p "$paf_cigs_path" -t tmp.paf."$hit_num".XXXX`
+    paf_single_line_path=`mktemp -p "$paf_cigs_path" -t tmp.paf1."$hit_num".XXXX`
+    cig_path=`mktemp -p "$paf_cigs_path" -t tmp.cig."$hit_num".XXXX`
+    paf_tallies_path=`mktemp -p "$paf_cigs_path" -t tmp.tal."$hit_num".XXXX`
+
+    samtools faidx {input.asm} "$src_rgn" >> "$src_fasta_path"
+    samtools faidx {input.asm} "$trg_rgn" >> "$trg_fasta_path"
+
+    minimap2 -x asm5 -N1 -p0.1 -m10 -E2,0 -s10 -t 1 -c --secondary=no "$src_fasta_path" "$trg_fasta_path" >> "$paf_path"
+
+    cat "$paf_path" | tail -n+2 >> appendCigarToPafErrs
+    cat "$paf_path" | head -1 >> "$paf_single_line_path"
+
+    cat "$paf_single_line_path" | awk 'BEGIN {{OFS="\\t"}} {{print $NF}}' | tr ':' '\\t' | cut -f 3 >> "$cig_path"
+
+    cat "$cig_path" | \
+      sed 's/M/\\tM\\n/g' | sed 's/I/\\tI\\n/g' | sed 's/D/\\tD\\n/g' | sed 's/N/\\tN\\n/g' | \
+      sed 's/S/\\tS\\n/g' | sed 's/H/\\tH\\n/g' | sed 's/P/\\tP\\n/g' | sed 's/X/\\tX\\n/g' | \
+      sed 's/=/\\t=\\n/g' | \
+      awk 'BEGIN {{OFS="\\t"; M=0; I=0; D=0; N=0; S0=0; H0=0; S1=0; H1=0; P=0; X=0; E=0; Ievent=0; Devent=0; alnStarted=0}} \
+        ($2=="M") {{M+=$1; alnStarted=1}} \
+        ($2=="I") {{I+=$1; Ievent++; alnStarted=1}} \
+        ($2=="D") {{D+=$1; Devent++; alnStarted=1}} \
+        ($2=="N") {{N+=$1; alnStarted=1}} \
+        ($2=="S" && alnStarted==0) {{S0+=$1}} \
+        ($2=="H" && alnStarted==0) {{H0+=$1}} \
+        ($2=="S" && alnStarted==1) {{S1+=$1}} \
+        ($2=="H" && alnStarted==1) {{H1+=$1}} \
+        ($2=="P") {{P+=$1; alnStarted=1}} \
+        ($2=="X") {{X+=$1; alnStarted=1}} \
+        ($2=="=") {{E+=$1; alnStarted=1}} \
+        END {{print M,I,D,N,S0,H0,S1,H1,P,X,E,Ievent,Devent}}' >> "$paf_tallies_path"
+
+    cat "$paf_single_line_path" | awk -v hitNum="$hit_num" 'BEGIN {{OFS="\\t"}} {{print hitNum,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12}}' | \
+    paste /dev/stdin "$cig_path" "$paf_tallies_path" > "$paf_cigs_path"/"$hit_num".mm2.paf.cig
+
+    rm -f "$src_fasta_path" "$trg_fasta_path" "$paf_path" "$paf_single_line_path" "$cig_path" "$paf_tallies_path"
+}}
+export -f getSams
+
+# Run function in parallel
+cat {input.paf} | tr '/' '\\t' | awk 'BEGIN {{OFS="\\" \\""}} {{print "\\""NR,$1,$2,$7,$9,$10"\\""}}' | xargs -P {resources.load} -I % bash -c 'getSams $@' _ %
+
+# merge resulting mapping with cigars
+# cat "$paf_cigs_path"/*.mm2.paf.cig | awk 'BEGIN {{OFS="\\t"}} {{print $1,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$2}}' | sort -k1,1n | cut -f2-15 > {input.paf}.cigars # Sometimes get "cat arugument list too long" error
+find "$paf_cigs_path" -type f -name "*.mm2.paf.cig" | xargs cat | awk 'BEGIN {{OFS="\\t"}} {{print $1,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$2}}' | sort -k1,1n | cut -f2-15 > {input.paf}.cigars
+
+# combine original paf with corresponding cigars
+cat {input.paf} | awk 'BEGIN {{OFS="\\t"}} {{print $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12}}' | paste /dev/stdin {input.paf}.cigars > {output.pafWithCig}
+
+# Output format: First 12 lines of paf file then cigar then #M #I #D #N #S0 #H0 #S1 #H1 #P #X #= #Ievents #Devents   (ie cigar decomposed)
+
+rm -rf "$paf_cigs_path"
+"""
+
 rule MappedPafIdentity:
     input:
-        mappedpaf="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf",
+        pafWithCig="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.cig",
     output:
         mappedpafbed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.bed",
     params:
         grid_opts=config["grid_small"],
         sd=SD,
     shell:"""
-cat {input.mappedpaf} | awk 'BEGIN {{OFS="\t"}} {{if ($5=="+") {{strand=0}} else {{strand=1}} print $6,$8,$9,$1,strand,$3,$4,$12,$10/$11,$10,"_","_","_"}}' > {output.mappedpafbed}
+# Report Accuracy:
+# cat {input.pafWithCig} | awk 'BEGIN {{OFS="\\t"}} {{if ($5=="+") {{strand=0}} else {{strand=1}} denom=$14+$15+$16+$17+$22+$23+$24; if (denom!=0) {{ident=($14+$24)/denom}} print $6,$8,$9,$1,strand,$18+$19,$2-$20-$21,$12,ident,$14+$24,$23,$15,$16}}' > {output.mappedpafbed}
+# Report Identity:
+cat {input.pafWithCig} | awk 'BEGIN {{OFS="\\t"}} {{if ($5=="+") {{strand=0}} else {{strand=1}} denom=$14+$17+$23+$24+$25+$26; if (denom!=0) {{ident=($14+$24)/denom}} print $6,$8,$9,$1,strand,$18+$19,$2-$20-$21,$12,ident,$14+$24,$23,$15,$16}}' > {output.mappedpafbed}
+"""
+
+rule MappedSamIdentity:
+    input:
+        mappedsam="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.sam",
+    output:
+        mappedsambed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.sam.bed",
+    params:
+        grid_opts=config["grid_small"],
+        sd=SD,
+    shell:"""
+ {params.sd}/hmcnc/src/samToBed {input.mappedsam} --reportAccuracy > {output.mappedsambed}
 """
 
 rule AddDepthCopyNumber:
