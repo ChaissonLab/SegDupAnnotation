@@ -1468,6 +1468,8 @@ rule AppendCigarToPaf:
     shell:"""
 paf_cigs_path=`mktemp -d -t tmp.paf_cigs.XXXX`
 export paf_cigs_path
+> appendCigarToPafErrs
+export appendCigarToPafErrs
 
 # Function to cut genes from asm, minimap them, and make cigar
 getSams () {{
@@ -1542,11 +1544,16 @@ rule MappedPafIdentity:
     params:
         grid_opts=config["grid_small"],
         sd=SD,
+        identity_calculation="identity"
     shell:"""
-# Report Accuracy:
-# cat {input.pafWithCig} | awk 'BEGIN {{OFS="\\t"}} {{if ($5=="+") {{strand=0}} else {{strand=1}} denom=$14+$15+$16+$17+$22+$23+$24; if (denom!=0) {{ident=($14+$24)/denom}} print $6,$8,$9,$1,strand,$18+$19,$2-$20-$21,$12,ident,$14+$24,$23,$15,$16}}' > {output.mappedpafbed}
-# Report Identity:
-cat {input.pafWithCig} | awk 'BEGIN {{OFS="\\t"}} {{if ($5=="+") {{strand=0}} else {{strand=1}} denom=$14+$17+$23+$24+$25+$26; if (denom!=0) {{ident=($14+$24)/denom}} print $6,$8,$9,$1,strand,$18+$19,$2-$20-$21,$12,ident,$14+$24,$23,$15,$16}}' > {output.mappedpafbed}
+if [ {params.identity_calculation} == "identity" ]
+then
+    # Report Identity: #matches/(#matches+#ins-events+#del-events+#mismatch)
+    cat {input.pafWithCig} | awk 'BEGIN {{OFS="\\t"}} {{if ($5=="+") {{strand=0}} else {{strand=1}} denom=$14+$17+$23+$24+$25+$26; if (denom!=0) {{ident=($14+$24)/denom}} print $6,$8,$9,$1,strand,$18+$19,$2-$20-$21,$12,ident,$14+$24,$23,$15,$16}}' > {output.mappedpafbed}
+else
+    # Report Accuracy: #matches/(#matches+#ins-bases+#del-bases+#mismatch)
+    cat {input.pafWithCig} | awk 'BEGIN {{OFS="\\t"}} {{if ($5=="+") {{strand=0}} else {{strand=1}} denom=$14+$15+$16+$17+$22+$23+$24; if (denom!=0) {{ident=($14+$24)/denom}} print $6,$8,$9,$1,strand,$18+$19,$2-$20-$21,$12,ident,$14+$24,$23,$15,$16}}' > {output.mappedpafbed}
+fi
 """
 
 rule MappedSamIdentity:
