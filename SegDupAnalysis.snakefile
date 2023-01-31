@@ -1475,8 +1475,7 @@ rule AppendCigarToPaf:
     shell:"""
 paf_cigs_path=`mktemp -d -t tmp.paf_cigs.XXXX`
 export paf_cigs_path
-> appendCigarToPafErrs
-export appendCigarToPafErrs
+> appendCigarToPafErrs.paf
 
 # Function to cut genes from asm, minimap them, and make cigar
 getSams () {{
@@ -1498,7 +1497,7 @@ getSams () {{
 
     minimap2 -x asm5 -N1 -p0.1 -m10 -E2,0 -s10 -t 1 -c --secondary=no "$src_fasta_path" "$trg_fasta_path" >> "$paf_path"
 
-    cat "$paf_path" | tail -n+2 >> appendCigarToPafErrs
+    cat "$paf_path" | tail -n+2 >> appendCigarToPafErrs.paf
     cat "$paf_path" | head -1 >> "$paf_single_line_path"
 
     cat "$paf_single_line_path" | awk 'BEGIN {{OFS="\\t"}} {{print $NF}}' | tr ':' '\\t' | cut -f 3 >> "$cig_path"
