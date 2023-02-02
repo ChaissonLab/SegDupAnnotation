@@ -1458,7 +1458,7 @@ rule MapNamedPaf:
     resources:
         load=16
     shell:"""
-minimap2 -x asm5 -p 0.2 -N 100 -m 10 -E2,0 -s 10 -t {resources.load} {input.asm} {input.fa}  > {output.mappedpaf}
+minimap2 -x asm20 -p 0.2 -N 100 -m 10 -E2,0 -s 10 -t {resources.load} {input.asm} {input.fa}  > {output.mappedpaf}
 """
         
 rule AppendCigarToPaf:
