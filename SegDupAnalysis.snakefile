@@ -134,6 +134,7 @@ rule AlignBam:
         gli=assembly+".gli"
     output:
         aligned="aligned/{base}.bam"
+    priority: 10
     params:
         sd=SD,
         ref=assembly,
@@ -1495,7 +1496,7 @@ getSams () {{
     samtools faidx {input.asm} "$src_rgn" >> "$src_fasta_path"
     samtools faidx {input.asm} "$trg_rgn" >> "$trg_fasta_path"
 
-    minimap2 -x asm5 -N1 -p0.1 -m10 -E2,0 -s10 -t 1 -c --secondary=no "$src_fasta_path" "$trg_fasta_path" >> "$paf_path"
+    minimap2 -x asm20 -N1 -p0.1 -m10 -E2,0 -s10 -t 1 -c --secondary=no "$src_fasta_path" "$trg_fasta_path" >> "$paf_path"
 
     cat "$paf_path" | tail -n+2 >> appendCigarToPafErrs.paf
     cat "$paf_path" | head -1 >> "$paf_single_line_path"
