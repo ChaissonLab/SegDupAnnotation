@@ -1968,7 +1968,12 @@ collapsedBasesInGenes="$(cat {input.fact} | awk \
     'BEGIN {{OFS="\t"; sum=0}} \
     (NR>1 && $9=="collapse") \
         {{sum+=($3-$2)*$8}} \
-    END {{print sum}}')" # sum of collapsed gene copies (excludes 'original' copies and resolved copies)
+    END {{printf "%1.0i\\n", sum}}')" # sum of collapsed gene copies (excludes 'original' copies and resolved copies)
+resolvedBasesinCollapsedGenes="$(cat {input.fact} | awk \
+    'BEGIN {{OFS="\t"; sum=0}} \
+    (NR>1 && $9=="collapse") \
+        {{sum+=($3-$2)}} \
+    END {{printf "%1.0i\\n", sum}}')" # sum of collapsed gene copies (excludes 'original' copies and resolved copies)
 resolvedBases="$(cat {input.fact} | awk \
     'BEGIN {{OFS="\t"; sum=0}} \
     (NR>1 && $9=="multi") \
@@ -1997,6 +2002,7 @@ resolved_duplicate_bases\t$resolvedBases\n\
 collapsed_duplications_count\t$collapsedDuplicationCount\n\
 collapsed_duplicated_gene_count\t$collapsedGeneCount\n\
 bases_in_collapsed_genes\t$collapsedBasesInGenes\n\
+resolved_bases_in_collapsed_genes\t$resolvedBasesinCollapsedGenes\n\
 Total_collapsed_bases\t$collapsedBasesTotal" > {output.summary}
 """
 
