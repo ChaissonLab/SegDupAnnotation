@@ -420,7 +420,7 @@ rule RunRefDepthHmm:
    output:
        vcf="hmm/copy_number.vcf",
        cov="hmm/cov_bins.bed.gz",
-       snvs="hmm/snvs.tsv"
+       snvs="hmm/snvs.tsv",
    params:
        grid_opts=config["grid_large"],
        sd=SD,
@@ -430,8 +430,8 @@ rule RunRefDepthHmm:
    shell:"""
 mkdir -p hmm
 {params.sd}/hmcnc/src/hmmcnc assembly.orig.fasta -a {input.v} -B hmm/cov_bins.bed -S {output.snvs} -o {output.vcf}
-bedtools sort -i hmm/cov_bins.bed | bgzip -c > hmm/cov_bins.bed.gz
-tabix hmm/cov_bins.bed.gz
+bedtools sort -i hmm/cov_bins.bed | bgzip -c > {output.cov}
+tabix {output.cov}
 """
 # 
 
@@ -1577,28 +1577,22 @@ rule MappedSamIdentity:
 
 rule AddDepthCopyNumber:
     input:
-        bed="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.bed",
-        col="collapsed_duplications.bed.range4",
+        col="hmm/cov_bins.bed.gz",
+        bed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.bed",
     output:
-        cntab="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn.tab",
-        cn="{data}.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn",
+        colv="cov_bins.converted.bed",
+        cntab="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn.tab",
+        cn="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn",
     params:
-        grid_opts=config["grid_small"],
-        filt=catchFilteredHits
+        grid_opts=config["grid_medium"],
     shell:"""
-bedtools intersect -loj -a {input.bed} -b {input.col} -f 1 | \
-   awk '{{ if ($19 == ".") {{ $19 = 2; }} print; }}' | \
-   tr " " "\\t" | bedtools groupby -g 1-4 -c 19 -o max | cut -f 5 > {output.cntab}
-paste {input.bed} {output.cntab} > {output.cn}
+zcat {input.col} | awk 'BEGIN {{ OFS="\\t" }} {{ print $1,$2,$3,$4,$4,$4 }}' > {output.colv}
 
-# Filter Analysis:
-if [ {params.filt} == "yes" ]
-then
-    bedtools intersect -loj -a {input.bed} -b {input.col}.filtAnn -f 1 | \
-       awk '{{ if ($19 == ".") {{ $19 = 2; }} print; }}' | \
-       tr " " "\\t" | bedtools groupby -g 1-4 -c 19,20 -o max,collapse | cut -f 5-6 > {output.cntab}.filtAnn
-    paste {input.bed} {output.cntab}.filtAnn > {output.cn}.filtAnn
-fi
+bedtools intersect -loj -a {input.bed} -b {output.colv} | \
+   awk 'BEGIN {{OFS="\\t"}} {{ if ($19 == ".") {{ $19 = 2; }} print; }}' | \
+   bedtools groupby -g 1-4 -c 19 -o mean | cut -f 5 | \
+   awk -v asmDepth=`cat hmm/mean_cov.txt` 'BEGIN {{OFS="\\t"}} {{printf "%1.0f\\n", ($1/asmDepth)}}' > {output.cntab}
+paste {input.bed} {output.cntab} > {output.cn}
 """
         
 #
@@ -1619,7 +1613,7 @@ sort -k4,4 {input.mappedsambed} | \
 # Filter Analysis:
 if [ {params.filt} == "yes" ]
 then
-    sort -k4,4 {input.mappedsambed}.filtAnn | \
+    sort -k4,4 {input.mappedsambed} | awk 'BEGIN {{OFS="\\t"}} {{print $0,"."}}' | \
       {params.sd}/SelectDuplicationsFromMM2_filtAnn.py /dev/stdin > {output.mappedsambeddups}.filtAnn
 fi
 """
@@ -1973,7 +1967,7 @@ collapsedBasesTotal="$(cat {input.colDups} | awk \
 collapsedBasesInGenes="$(cat {input.fact} | awk \
     'BEGIN {{OFS="\t"; sum=0}} \
     (NR>1 && $9=="collapse") \
-        {{sum+=($3-$2)}} \
+        {{sum+=($3-$2)*$8}} \
     END {{print sum}}')" # sum of collapsed gene copies (excludes 'original' copies and resolved copies)
 resolvedBases="$(cat {input.fact} | awk \
     'BEGIN {{OFS="\t"; sum=0}} \
