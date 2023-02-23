@@ -1597,6 +1597,7 @@ paste {input.bed} {output.cntab} > {output.cn}
         
 #
 # This selects genes that either have multiple copies or overlap a collapse.
+# Rounds depth down from 1.99 to 1
 #
 rule MappedSamIdentityDups:
     input:
