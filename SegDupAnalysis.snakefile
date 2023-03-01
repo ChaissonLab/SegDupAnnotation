@@ -71,10 +71,10 @@ rule all:
         gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count",
         gene_count_2column="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count_multi_single",
         gene_count_abbrvNames="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count.abbrv_names",
-        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
-        uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
+        #asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.repeat_masked.fasta", "assembly.union_masked.fasta"]),
+        #uniqueDupGenes="gencode.mapped.bam.bed12.dups.unique",
         #sedef_high_uniq="sedef_out/all/final.sorted.bed.uniq.high",        
-        uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
+        #uniqueDupGenesCN="gencode.mapped.bam.bed12.dups.unique.cn",
         summary="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.summary",
 # CIRCOS targets
 #        links="circos/genes_in_resolved_dups.links.tsv",
