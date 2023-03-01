@@ -451,7 +451,7 @@ zcat {input.bed} | awk '($4 > 2) {{print}}' > {output.dups}
 # Filter Analysis:
 if [ {params.filt} == "yes" ]
 then
-    zcat {input.bed} | awk '($4 <=2) {{print}}' > {output.dups}.filtOut
+    zcat {input.bed} | awk '($4 <= 2) {{print}}' > {output.dups}.filtOut
 fi
 """
 
