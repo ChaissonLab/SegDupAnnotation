@@ -83,7 +83,7 @@ rule all:
         mean="hmm/mean_cov.txt",        
         cnvcf="hmm/copy_number.vcf",
         dups="collapsed_duplications.bed",
-        not_masked="collapsed_duplications.split.bed.not_masked"
+        #not_masked="collapsed_duplications.split.bed.not_masked"
 
 
 #
