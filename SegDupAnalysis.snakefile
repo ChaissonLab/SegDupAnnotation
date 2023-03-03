@@ -115,7 +115,7 @@ rule IndexGenome:
         gli=assembly+".gli"
     params:
         sd=SD,
-        grid_opts="sbatch -c 1 --mem=32G --time=4:00:00 --partition=qcb",
+        grid_opts="sbatch -c 1 --mem=32G --time=4:00:00 --partition=qcb --account=mchaisso_100",
         index_params=config["index_params"]
     shell:"""
 lra index {input.ref} {params.index_params}
@@ -158,7 +158,7 @@ rule MergeBams:
     input:
         aln=expand("aligned/{b}.bam", b=bamFiles.keys())
     output:
-        bam=config["bam"]        
+        bam=config["bam"]
     params:
         grid_opts=config["grid_medium"]
     resources:
@@ -405,9 +405,9 @@ else:
        output:
            comb="assembly.union_masked.fasta"
        shell:"""
-ln -sf {input.orig} {output.comb}
-samtools faidx {output.comb}
-"""
+    ln -sf {input.orig} {output.comb}
+    samtools faidx {output.comb}
+    """
 
 #
 # Use excess depth to count duplications
