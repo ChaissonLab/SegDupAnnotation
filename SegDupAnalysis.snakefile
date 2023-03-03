@@ -1581,7 +1581,6 @@ rule AddDepthCopyNumber:
         bed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.paf.bed",
     output:
         colv="cov_bins.converted.bed",
-        cntab="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn.tab",
         cn="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.cn",
     params:
         grid_opts=config["grid_medium"],
@@ -1589,10 +1588,9 @@ rule AddDepthCopyNumber:
 zcat {input.col} | awk 'BEGIN {{ OFS="\\t" }} {{ print $1,$2,$3,$4,$4,$4 }}' > {output.colv}
 
 bedtools intersect -loj -a {input.bed} -b {output.colv} | \
-   awk 'BEGIN {{OFS="\\t"}} {{ if ($19 == ".") {{ $19 = 2; }} print; }}' | \
-   bedtools groupby -g 1-4 -c 19 -o mean | cut -f 5 | \
-   awk -v asmDepth=`cat hmm/mean_cov.txt` 'BEGIN {{OFS="\\t"}} {{printf "%1.0f\\n", ($1/asmDepth)}}' > {output.cntab}
-paste {input.bed} {output.cntab} > {output.cn}
+    awk 'BEGIN {{OFS="\\t"}} {{ if ($19 == ".") {{ $19 = 2; }} print; }}' | \
+    bedtools groupby -g 1-4 -c 5,6,7,8,9,10,11,12,13,19 -o first,first,first,first,first,first,first,first,first,mean | \
+    awk -v asmDepth=`cat hmm/mean_cov.txt` 'BEGIN {{OFS="\\t"}} {{$14=sprintf("%1.0f",($14/asmDepth)); print $0}}' > {output.cn}
 """
         
 #
