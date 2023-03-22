@@ -1880,8 +1880,9 @@ rule FilterLowDepthDups:
     input:
         depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
     output:
-        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
+        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt1",
     params:
+        grid_opts=config["grid_small"],
         filt=catchFilteredHits
     shell:"""
 cat {input.depth} | bioawk -c hdr '{{ if ($depth > 0.05) print;}}' > {output.depth_filt}
@@ -1897,6 +1898,36 @@ then
             else \
                 {{ print $1,$2,$3,$4,$5,$6,$7,$9,"filtOut:FilterLowDepthDups("$8")" }} \
         }}' > {output.depth_filt}.filtAnn
+fi
+"""
+
+rule FilterShortCopies:
+    input:
+        depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt1",
+    output:
+        depth_filt="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt",
+    params:
+        grid_opts=config["grid_small"],
+        filt=catchFilteredHits
+    shell:"""
+cat {input.depth} | \
+    awk -v minLength=5000 'BEGIN {{OFS="\\t"}} \
+        (NR==1) \
+            {{print $0}} \
+        (NR>1 && $3-$2>=minLength) \
+            {{print}}' > {output.depth_filt}
+
+# Filter Analysis:
+if [ {params.filt} == "yes" ]
+then
+    cat {input.depth}.filtAnn | \
+    awk -v minLength=5000 'BEGIN {{OFS="\\t"}} \
+        (NR==1) \
+            {{print $0}} \
+        (NR>1 && $3-$2>=minLength) \
+            {{print}} \
+        (NR>1 && $3-$2<minLength) \
+            {{print $1,$2,$3,$4,$5,$6,$7,$8,"filtOut:FilterShortCopies("$9")"}}' > {output.depth_filt}.filtAnn
 fi
 """
 
