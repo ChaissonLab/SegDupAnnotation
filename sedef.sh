@@ -4,7 +4,7 @@
 echo "Start: `date`"
 
 GETOPT="getopt"
-TIME=`which time`
+#TIME=`which time`
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	:
@@ -137,7 +137,7 @@ if [ ! -f "${output}/seeds.joblog.ok" ] || [ "${force}" == "y" ]; then
 			if [ ! -e "${output}/seeds/${i}_${j}_${m}.bed" ]; then
 			    if [[  "$m" == "y"  && ( rc="-r" || rc="" ) ]]; then
 				echo " sedef search -k 12 -w 16 ${rc} ${input} -t $i $j " 1>&2
-				echo "${TIME} -f'TIMING: %e %M' sedef search -k 12 -w 16 ${rc} ${input} -t $i $j >${output}/seeds/${i}_${j}_${m}.bed 2>${output}/log/seeds/${i}_${j}_${m}.log"
+				echo "sedef search -k 12 -w 16 ${rc} ${input} -t $i $j >${output}/seeds/${i}_${j}_${m}.bed 2>${output}/log/seeds/${i}_${j}_${m}.log"
 								    fi
 								     else
 									 echo "${output}/seeds/${i}_${j}_${m}.bed already exists" 1>&2
@@ -145,7 +145,7 @@ if [ ! -f "${output}/seeds.joblog.ok" ] || [ "${force}" == "y" ]; then
 			fi
 			done
 		done
-	done | tee "${output}/seeds.comm" | ${TIME} -f'Seeding time: %E' parallel --will-cite -j ${jobs} --bar --joblog "${output}/seeds.joblog"
+	done | tee "${output}/seeds.comm" | parallel --will-cite -j ${jobs} --bar --joblog "${output}/seeds.joblog"
  								     
 #	proc=`cat "${output}/seeds.comm" | wc -l`
 #	echo "SD seeding done: done running ${proc} jobs!"
@@ -175,7 +175,7 @@ if [ ! -f "${output}/bucket.joblog.ok" ] || [ "${force}" == "y" ]; then
 
 	mkdir -p "${output}/align"
 	echo sedef align bucket -n 1000 "${output}/seeds" "${output}/align" "${input}"
-	${TIME} -f'Bucketing time: %E' sedef align bucket -n 1000 "${output}/seeds" "${output}/align" "${input}" 2>"${output}/log/bucket.log"
+	sedef align bucket -n 1000 "${output}/seeds" "${output}/align" "${input}" 2>"${output}/log/bucket.log"
 
 	if [ $? -ne 0 ]; then
 		echo "Error: bucketing failed; exiting..."
@@ -197,11 +197,11 @@ if [ ! -f "${output}/align.joblog.ok" ] || [ "${force}" == "y" ]; then
 	    k=$(basename $j);
 	    if [ ! -e "${j}.aligned.bed" ] ; then
 		echo "sedef align generate -k 11 \"${input}\" $j >${j}.aligned.bed" 1>&2
-		echo "${TIME} -f'TIMING: %e %M' sedef align generate -k 11 \"${input}\" $j >${j}.aligned.bed 2>${output}/log/align/${k}.log"
+		echo "sedef align generate -k 11 \"${input}\" $j >${j}.aligned.bed 2>${output}/log/align/${k}.log"
 	    else
 		echo "${j}.aligned.bed already aligned " 1>&2
 	    fi
-	done | tee "${output}/align.comm" | ${TIME} -f'Aligning time: %E' parallel --will-cite -j "${jobs}" --bar --joblog "${output}/align.joblog"
+	done | tee "${output}/align.comm" | parallel --will-cite -j "${jobs}" --bar --joblog "${output}/align.joblog"
 
 	proc=`cat "${output}/align.comm" | wc -l`
 	echo "SD alignment done: finished ${proc} jobs!"
@@ -237,8 +237,7 @@ if [ ! -f "${output}/report.joblog.ok" ] || [ "${force}" == "y" ]; then
 	# Now get the final calls
 	export OMP_NUM_THREADS=${jobs}
 	# echo ${OMP_NUM_THREADS}
-	(${TIME} -f'Report time: %E (%M MB, user %U)' \
-		sedef stats generate ${stat_params} "${input}" "${output}/aligned.bed" |\
+	( sedef stats generate ${stat_params} "${input}" "${output}/aligned.bed" |\
 		sort -k1,1V -k9,9r -k10,10r -k4,4V -k2,2n -k3,3n -k5,5n -k6,6n |\
 		uniq > "${output}/final.bed") 2>&1 | sed 1d
 
@@ -259,14 +258,14 @@ echo "************************************************************************"
 
 if [ -f "${wgac}" ]; then
 	echo "Comparing WGAC with SEDEF..."
-	# ${TIME} -f'Python time: %E (%M MB)' python2 scratch/check-overlap.py \
+	# python2 scratch/check-overlap.py \
 	# 	${wgac} ${output}/aligned.bed ${output}/aligned.misses.txt
 	# ${TIME} -f'diff time: %E (%M MB)' sedef stats diff ${input} \
 	# 	${output}/aligned.bed ${wgac}
 	# echo "Running SD/final checking..."
-	${TIME} -f'Python time: %E (%M MB)' python2 scratch/check-overlap.py \
+	python2 scratch/check-overlap.py \
 		${wgac} ${output}/final.bed ${output}/final.misses.txt
-	${TIME} -f'diff time: %E (%M MB)' sedef stats diff ${input} \
+	sedef stats diff ${input} \
 		${output}/final.bed ${wgac}
 fi
 

@@ -54,13 +54,19 @@ rule all:
         bam=config["bam"],
         sedef="sedef_out/final.bed",
         sedef_sorted="sedef_out/final.sorted.bed",
-        filt="sedef_out/all/final.sorted.bed.final.filt",        
+        wmMasked="assembly.masked.fasta",
+        filt="sedef_out/all/final.sorted.bed.final.filt",
+        gcbam="gencode.minimapped.bam",                
+        gcbamfilt="gencode.mapped.bam",
+        genecov="gencode.mapped.bam.bed12.multi_exon.cn",        
+        gccn_iso="gencode.mapped.bam.bed12.cn.gene",        
         mappedsam="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam",
         mappedsambed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed",
         mappedsambeddups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
         mappedsambeddupsorigAnnot="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig",
         mappeddupsOneIsoform="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.one_isoform",
         combined_gencode="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined",
+        collapsed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.collapsed",        
         comb_with_depth="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth",
         fact="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.fact",
         gene_count="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined.depth.filt.gene_count",
@@ -125,7 +131,7 @@ def GetBam(f):
 rule AlignBam:
     input:
         bam=lambda wildcards: bamFiles[wildcards.base],
-        gli=assembly+".gli"
+#        gli=assembly+".gli"
     output:
         aligned="aligned/{base}.bam"
     params:
@@ -142,7 +148,7 @@ rule AlignBam:
  #  samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned}
 
 {params.sd}/Cat.sh {input.bam} | minimap2 {params.ref} - -t 16 -a  | \
-   samtools sort -T {params.temp}/asm.$$ -m2G -o {output.aligned} 
+   samtools sort -T $TEMPDIR/asm.$$ -m2G -o {output.aligned} 
 
 #samtools view -h -F 2304 {input.bam} | samtools fastq - | 
 """
@@ -319,7 +325,7 @@ rule MaskFasta:
     params:
         grid_opts=config["grid_medium"],
         repeatLibrary=config["repeat_library"],
-        tmpdir=tempp,
+#        tmpdir=tempp,
     resources:
         load=8
     shell:"""
@@ -365,7 +371,7 @@ rule CombineMasked:
     resources:
         load=1
     shell:"""
-snakemake -p -s {params.sd}/RepeatMaskGenome.snakefile -j 20 --cluster "{params.grid_opts}" --nolock
+snakemake -p -s {params.sd}/RepeatMaskGenome.snakefile -j 100 --cluster "{params.grid_opts}" --nolock
 """
 
 
@@ -577,7 +583,7 @@ module load time
 module load parallel
 export PATH=$PATH:{params.sd}/sedef
 
-{params.sd}/sedef.sh  {input.asm} -j 12
+{params.sd}/sedef.sh -f  {input.asm} -j 12
 """
 #
 # Sort by chrom and start, fixing a bug in sedef output that misses
@@ -682,31 +688,54 @@ rule GetCN:
     shell:"""
 {params.sd}/CovVcfToBed.py {input.vcf} | gzip -c > {output.bed}
 """
-    
 
+rule GencodeToExons:
+    input:
+        gc="gencode.mapped.bam.bed12.multi_exon",
+    output:
+        bed6="gencode.mapped.bam.bed6.multi_exon",
+    shell:"""
+bedtools bed12tobed6 -i {input.gc} > {output.bed6}
+"""
+          
 rule GencodeCN:
     input:
-        gc="gencode.mapped.bam.bed12",
+        gc="gencode.mapped.bam.bed6.multi_exon",
+        extraCopies="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups",
         cn="hmm/cov_bins.bed.gz",
-        genome="assembly.orig.fasta"
+        genome="assembly.orig.fasta",
+        meanCov="hmm/mean_cov.txt"
     params:
         grid_opts=config["grid_small"],
+        sd=SD
     output:
-        gccn="gencode.mapped.bam.bed12.cn",
+        gccn="gencode.mapped.bam.bed6.cn",
     shell:"""
-bedtools intersect -loj -g {input.genome}.fai -a gencode.mapped.bam.bed12 -b {input.cn} -sorted | awk '{{ if (NF== 17) print;}}' | bedtools groupby -g 1-4 -c 17 -o mean > {output.gccn}
-
+{params.sd}/GetCoverageOfRegions.py {input.gc} <( zcat {input.cn} ) `cat {input.meanCov}` > {output.gccn}
 """
 
+rule CombineCovAndBed12:
+    input:
+        cov="gencode.mapped.bam.bed6.cn",
+        genes="gencode.mapped.bam.bed12.multi_exon",
+        meanCov="hmm/mean_cov.txt"        
+    output:
+        genes="gencode.mapped.bam.bed12.multi_exon.cn",
+    params:
+        sd=SD,
+        grid_opts=config["grid_small"],
+    shell:"""
+{params.sd}/AddCoverageToBed.py {input.cov} {input.genes} `cat {input.meanCov}` {output.genes}    
+"""
 rule GencodeOneIsoCN:
     input:
-        gccn="gencode.mapped.bam.bed12.cn",
+        genes="gencode.mapped.bam.bed12.multi_exon.cn",
     output:
-        gccn_iso="gencode.mapped.bam.bed12.cn.one_iso",
+        gccn_iso="gencode.mapped.bam.bed12.cn.gene",
     params:
         grid_opts=config["grid_small"],
     shell:"""
-cat {input.gccn} | tr "|" "\\t" | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$9"\\t"$NF;}}' | bedtools groupby -g 4 -c 5 -o median > {output.gccn_iso}
+cat {input.genes} | SimplifyName.py | awk '{{ if ($(NF-1) >= 2) print; }}' | cut -f 1-4,13 | bedtools merge -c 4,5 -o first,min | sort -k5,5nr > {output.gccn_iso}
 """
 
 
@@ -1304,12 +1333,12 @@ rule MapIsoSeq:
         aln="IsoSeq/{dataset}.bam" 
     params:
         grid_opts=config["grid_large"],
-        temp=config["temp"],
+#        temp=config["temp"],
     resources:
         load=16
     shell:"""
 mkdir -p IsoSeq
-minimap2 -t 16 -ax splice -uf -C5 {input.assembly} {input.rna} | samtools view -uS - | samtools sort -T {params.temp} -m2G -o {output.aln}
+minimap2 -t 16 -ax splice -uf -C5 {input.assembly} {input.rna} | samtools view -uS - | samtools sort -T $TEMPDIR -m2G -o {output.aln}
 samtools index -c {output.aln}
 """
 
@@ -1362,7 +1391,7 @@ rule MinimapGeneModel:
     resources:
         load=8
     shell:"""
-minimap2 -x splice -a -t 4 {input.asm} {input.fa}  | samtools sort -T {params.temp}/tmp.$$ -o {output.bam}
+minimap2 -x splice -p 0.5 -a -t 8 --secondary-seq {input.asm} {input.fa}  | samtools sort -T $TEMPDIR/tmp.$$  -o {output.bam}
 samtools index -c {output.bam}
 """
 
@@ -1474,7 +1503,7 @@ rule AnnotateOriginal:
     shell:"""
 {params.sd}/AnnotateOriginal.py {input.mappedsambeddups} > {output.annot}
 """
-    
+
 rule SelectDupsOneIsoform:
     input:
         dups="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.annot_orig" 
@@ -1485,7 +1514,7 @@ rule SelectDupsOneIsoform:
     shell:"""
 cut -f 4 {input.dups} |   {params.sd}/SimplifyName.py | sort | uniq > {input.dups}.genes
 for gene in `cat {input.dups}.genes`; do
-  grep "|$gene|" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse ; \
+  grep "$gene" {input.dups} | bedtools sort | bedtools merge -c 4,5,6,7,8,9,10,11,12,13,14,15,16 -o first,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,collapse,max,max,collapse ; \
 done |
   {params.sd}/SimplifyName.py | \
     {params.sd}/FixOriginalCopy.py | \
@@ -1509,7 +1538,7 @@ zcat {input.bins} | awk '{{ s+=$4;n+=1; }} END {{ print s/n;}}' > {output.mc}
 """
 
 rule GetGeneCoverage:
-    input:
+    input:        
         iso="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.sam.bed.dups.one_isoform",
         bins="hmm/cov_bins.bed.gz",
         mean="hmm/mean_cov.txt"
@@ -1529,7 +1558,7 @@ rule GetCombinedTable:
         bed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.bed",
         cov="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.bed.txt"
     output:
-        combined="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined"
+        combined="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.cov"
     params:
         sd=SD
     shell:"""
@@ -1537,6 +1566,30 @@ echo -e "#chrom\\tstart\\tend\\tgene\\tsim\\tidentity\\tcopy" > {output.combined
 paste {input.bed} {input.cov} | awk '{{ c=int($NF+0.5); if (c < 1) {{ c=1; }} print $1"\\t"$2"\\t"$3"\\t"$7"\\t"$18"\\t"$19"\\t"c;}}' >> {output.combined}
 """
 
+rule AddCollapsedNotDup:
+    input:
+        combined="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.cov",
+        gccn_iso="gencode.mapped.bam.bed12.cn.gene",        
+    output:
+        combined="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined"
+    params:
+        grid_opts=config["grid_small"]
+    shell:"""
+bedtools intersect -v -a {input.gccn_iso} -b {input.combined} | awk '{{ print $1"\\t"$2"\\t"$3"\\t"$4"\\t1\tOriginal\t"int($5+0.5) }}' > {input.gccn_iso}.new
+cat {input.combined} {input.gccn_iso}.new  > {output.combined}    
+"""    
+
+rule WriteCollapsedDups:
+    input:
+        combined="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.combined"
+    output:
+        collapsed="gencode.mapped.bam.bed12.multi_exon.fasta.named.mm2.dups.one_isoform.txt.collapsed"
+    params:
+        grid_opts=config["grid_small"]
+    shell:"""
+cat {input.combined} | awk '{{ if ($7 >= 2) print $1"\\t"$2"\\t"$3"\\t"$4"\\t"int($7+0.5);}}' > {output.collapsed}
+"""    
+        
 
 rule MinimapGeneModelBed:
     input:
@@ -1558,7 +1611,7 @@ rule FilterMultiExonBed:
     output:
         multiExon="{data}.mapped.bam.bed12.multi_exon"        
     shell:"""
-cat {input.bed} | awk '{{ if ($10 > 1 && $3-$2 > 1000) print;}}'  > {output.multiExon}
+cat {input.bed} | awk '{{ if ($10 > 1 && $3-$2 > 800) print;}}'  > {output.multiExon}
 """
     
 #rule AlignRNASeq:

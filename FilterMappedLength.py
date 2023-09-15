@@ -17,7 +17,6 @@ for aln in af.fetch():
     astat=aln.get_cigar_stats()
     nHardClip=astat[0][5]
     nMatch = astat[0][0] + astat[0][7] + astat[0][8]
-    
     if strict and "protein_coding" not in aln.query_name:
         continue
     if (aln.query_sequence is None):

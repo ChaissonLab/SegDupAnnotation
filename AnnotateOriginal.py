@@ -13,7 +13,7 @@ for line in inFile:
     srcStart=int(nameRgn[2])
     srcEnd=int(nameRgn[3])
     
-    if (chrom == srcChrom and abs(srcStart - start) < 100 and abs(srcEnd-end) < 100):
+    if (chrom == srcChrom and (abs(srcStart - start) < 100 and abs(srcEnd-end) < 100) or ( ( start >= srcStart and  start < srcEnd) or (end >= srcStart and end < srcEnd) or (start <= srcStart and end >= srcEnd) ) ):
         sys.stdout.write(line.strip() + "\tOriginal\n")
     else:
         sys.stdout.write(line.strip() + "\tCopy\n")

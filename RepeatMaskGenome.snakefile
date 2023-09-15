@@ -49,7 +49,6 @@ rule MaskContig:
     params:
         grid_opts=config["grid_repeatmasker"],
         repeatLibrary=config["repeat_library"],
-        tmpdir=tempDir,
         sd=SD        
     shell:"""
 mkdir -p masked
@@ -77,7 +76,6 @@ rule SpecialMaskContig:
     params:
         grid_opts=config["grid_repeatmasker"],
         repeatLibrary=config["t2t_repeat_library"],
-        tmpdir=tempDir,
         sd=SD
     shell:"""
 if [ {params.repeatLibrary} != "na" ]
@@ -121,7 +119,9 @@ rule MergeMaskerRuns:
         sd=SD
     shell:"""
 {params.sd}/comask {output.comb} {input.humLib} {input.t2tLib}
-{params.sd}/RepeatMasking/AppendOutFile.py {output.combOut} {input.humLibOut} {input.t2tLibOut}
+echo {input.humLibOut} > comb/to_mask.{wildcards.index}.names
+echo {input.t2tLibOut} >> comb/to_mask.{wildcards.index}.names    
+{params.sd}/RepeatMasking/AppendOutFile.py {output.combOut} comb/to_mask.{wildcards.index}.names
 """
 
 rule CombineMask:
