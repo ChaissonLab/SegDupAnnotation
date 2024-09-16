@@ -36,7 +36,7 @@ int GetRefAndAlt(char refNuc, vector<int> &counts, int &ref, int &alt) {
     return 4;
   }
   int refNucIndex=NucMap[refNuc];
-  if (first == 0 or second/first < 0.2) {
+  if (first == 0 or second/first < 0.01) {
     ref=0;
     alt=0;
     return 4;
@@ -124,7 +124,7 @@ int main(int argc, const char* argv[]) {
 		vector<int> nA(regionLength, 0), nC(regionLength, 0), nT(regionLength, 0), nG(regionLength,0), nDel(regionLength, 0);
 		while (bam_itr_next(htsfp, regionIter, b) > 0) {
 			nReads+=1;
-			if (nReads % 1000 == 0) { 
+			if (nReads % 10000 == 0) { 
 				cerr << "... " << nReads << endl;
 			}
 			int readLength = b->core.l_qseq;			
@@ -203,6 +203,8 @@ int main(int argc, const char* argv[]) {
 					}
 				}
 			}
+			bam_destroy1(b);
+			b = bam_init1();						
 		}
 		int chromSeqLen=0;
 		char *chromSeq=faidx_fetch_seq(fai, chrom.c_str(), start, end, &chromSeqLen);

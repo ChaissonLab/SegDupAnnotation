@@ -31,8 +31,6 @@ localrules: all, AnnotateResolvedTandemDups, GetUniqueGencodeUnresolvedDupGenes,
 
 
 
-config["assembly"] = "assembly.repeat_masked.fasta"
-
 #import shutil
 #onsuccess:
 #    shutil.rmtree(".snakemake")
@@ -46,8 +44,8 @@ rule all:
         fai=assembly+".fai",
         sedef="sedef_out/final.bed",
         sedef_sorted="sedef_out/final.sorted.bed",
-        filt="sedef_out/all/final.sorted.bed.final.filt",        
-        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.union_masked.fasta"]),
+        filt="sedef_out/all/final.sorted.bed.final.filt"
+#        asmMask=expand("{asm}.count_masked", asm=["assembly.orig.fasta", "assembly.masked.fasta", "assembly.union_masked.fasta"]),
 
 
 
@@ -61,7 +59,7 @@ rule MakeFaiLinkOrig:
         asm=config['assembly']
     output:
         orig=assembly,
-        fai=assembly+".fai"
+        fai=assembly + ".fai"
     params:
         grid_opts=config["grid_medium"],
         sd=SD
@@ -78,89 +76,6 @@ def GetBam(f):
 #
 # Map individual bams separately
 #
-
-#rule MakeWMDB:
-#    input:
-#        asm=assembly
-#    output:
-#        wm_db="wmdb"
-#    params:
-#        grid_opts=config["grid_medium"]
-#    resources:
-#        load=2
-#    shell:"""
-#windowmasker -mk_counts -in {input.asm} -out {output.wm_db}  || true
-#"""
-#
-#rule MakeWMIntv:
-#    input:
-#        wm_db="wmdb",
-#        asm=assembly
-#    output:
-#        intv="wm_mask_intervals"
-#    params:
-#        grid_opts=config["grid_large"]
-#    resources:
-#        load=2
-#    shell:"""
-#windowmasker -ustat {input.wm_db} -in {input.asm} -out {output.intv}  || true
-#"""
-#
-#rule MakeWMBed:
-#    input:
-#        intv="wm_mask_intervals"
-#    output:
-#        bed="wm_mask_intervals.bed"
-#    params:
-#        grid_opts=config["grid_small"]
-#    resources:
-#        load=1
-#    shell:"""
-#cat {input.intv} | awk '{{ if (substr($1,0,1) == ">") {{ name=substr($1,1); }} else {{ if ($3-$1 > 100) print name"\\t"$1"\\t"$3;}} }}' | tr -d ">" > {output.bed}
-#"""
-#
-#rule MaskFile:
-#    input:
-#        bed="wm_mask_intervals.bed",
-#        asm=assembly
-#    output:
-#        masked="assembly.masked.fasta"
-#    params:
-#        grid_opts=config["grid_medium"],
-#        sd=SD
-#    resources:
-#        load=1
-#    shell:"""
-#{params.sd}/bemask {input.asm} {input.bed} {output.masked}
-#"""
-#
-#
-# Run repeat masker on the assembly. This will be combined with the
-# windowmasker to generate a masked genome.
-#
-
-    
-
-#
-#  The final masked genome combines wm and repeatmasker
-#
-
-#rule UnionMasked:
-#    input:
-#        orig="assembly.orig.fasta",
-#        wm="assembly.masked.fasta",
-#    output:
-#        comb="assembly.union_masked.fasta"
-#    params:
-#        sd=SD,
-#        grid_opts=config["grid_large"]
-#    resources:
-#        load=1
-#    shell:"""
-#    {params.sd}/comask {output.comb} {input.orig} {input.wm}
-#    samtools faidx {output.comb}
-#"""
-
 #
 # The following rules do the initial resolved repeat detection with
 # sedef, and then postprocess the output to remove excess duplications.
@@ -171,11 +86,10 @@ def GetBam(f):
 #
 rule RunSedef:
     input:
-#        asm="assembly.union_masked.fasta"
+        asm=assembly
     output:
         done="sedef_out/final.bed"
     params:
-        asm="assembly.union_masked.fasta",        
         grid_opts=config["grid_sedef"],
         sd=SD
     resources:
@@ -187,7 +101,7 @@ module load time
 module load parallel
 export PATH=$PATH:{params.sd}/sedef
 
-{params.sd}/sedef.sh  {params.asm} -j 8
+{params.sd}/sedef.sh  {input.asm} -j 8
 """
 #
 # Sort by chrom and start, fixing a bug in sedef output that misses
@@ -622,7 +536,7 @@ rule CombineGenesWithCollapsedDups:
     input:
         rnabed="{data}.mapped.bam.bed12",
         dups="collapsed_duplications.bed.range4",
-        asm="assembly.union_masked.fasta"
+        asm=assembly
     output:
         rnabedout="{data}.mapped.bam.bed12.dups",
     params:
@@ -877,7 +791,7 @@ bedtools intersect -loj -a {input.missed} -b {input.missed} -sorted -f 0.9 -r | 
 rule CountMaskedSedef:
     input:
         s="sedef_out/final.sorted.first_filtered.bed",
-        asm="assembly.union_masked.fasta",
+        asm=assembly
     output:
         f="sedef_out/final.sorted.bed.frac_masked"
     params:
